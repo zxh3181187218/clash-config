@@ -37,7 +37,7 @@ proxies:
   # 荷兰节点
   - name: "🇳🇱 荷兰"
     type: vmess
-    server: "[[2a12:bec4:1822:163:1234:678:0:1c]]"
+    server: 2a12:bec4:1822:163:1234:678:0:1c
     port: 8880
     uuid: 6fff946b-d37e-4304-accc-055796fefe84
     alterId: 0
@@ -52,7 +52,7 @@ proxies:
   # 日本节点
   - name: "🇯🇵 日本"
     type: vmess
-    server: "[2001:2c0:100:415:17:cafe:110:1]"
+    server: 2001:2c0:100:415:17:cafe:110:1
     port: 25803
     uuid: 01f5273a-4bd7-427b-bdb4-0066690eb890
     alterId: 0
