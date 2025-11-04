@@ -1,3 +1,5 @@
+# Clash 优化配置文件
+# 混合端口（HTTP + SOCKS5）
 mixed-port: 7890
 allow-lan: true
 bind-address: '*'
@@ -110,7 +112,6 @@ proxy-groups:
       - "🇯🇵 日本"
       - "🇳🇱 荷兰"
       - "🇨🇳 成都"
-      - "DIRECT"
 
   # ========== 自动选择组 ==========
   - name: "♻️ 自动选择"
@@ -123,7 +124,7 @@ proxy-groups:
     interval: 300
     tolerance: 50
 
-  # ========== 国外节点组 ==========
+  # ========== 国外节点组（强制走国外）==========
   - name: "🌐 国外节点"
     type: select
     proxies:
@@ -131,7 +132,6 @@ proxy-groups:
       - "🔄 故障转移"
       - "🇯🇵 日本"
       - "🇳🇱 荷兰"
-      - "DIRECT"
 
   - name: "🌍 国外自动"
     type: url-test
@@ -192,21 +192,20 @@ proxy-groups:
   - name: "🍎 Apple"
     type: select
     proxies:
-      - "DIRECT"
       - "🌏 国内节点"
       - "🌐 国外节点"
 
   - name: "🎮 游戏平台"
     type: select
     proxies:
-      - "DIRECT"
+      - "🌏 国内节点"
       - "🌐 国外节点"
       - "🚀 节点选择"
 
   - name: "🎯 全球直连"
     type: select
     proxies:
-      - "DIRECT"
+      - "🌏 国内节点"
       - "🚀 节点选择"
 
   - name: "🛑 广告拦截"
@@ -218,10 +217,9 @@ proxy-groups:
   - name: "🐟 漏网之鱼"
     type: select
     proxies:
-      - "🚀 节点选择"
       - "🌐 国外节点"
+      - "🚀 节点选择"
       - "🌏 国内节点"
-      - "DIRECT"
 
 # 分流规则
 rules:
@@ -305,7 +303,6 @@ rules:
 
   # ========== GeoIP 规则 ==========
   - GEOIP,CN,🌏 国内节点
-  - GEOSITE,CN,🌏 国内节点
 
   # ========== 最终规则 ==========
   - MATCH,🐟 漏网之鱼
