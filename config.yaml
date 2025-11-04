@@ -44,7 +44,7 @@ proxies:
     cipher: auto
     network: ws
     ws-opts:
-      path: /6fff946b-d37e-4304-accc-055796fefe84-vm
+      path: 6fff946b-d37e-4304-accc-055796fefe84-vm
       headers:
         Host: pull.free.video.10010.com
     tls: false
@@ -59,7 +59,7 @@ proxies:
     cipher: auto
     network: ws
     ws-opts:
-      path: /01f5273a-4bd7-427b-bdb4-0066690eb890-vm
+      path: 01f5273a-4bd7-427b-bdb4-0066690eb890-vm
       headers:
         Host: pull.free.video.10010.com
     tls: false
