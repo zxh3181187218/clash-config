@@ -52,7 +52,7 @@ dns:
 # 代理节点配置
 proxies:
   # ========== 国内节点 ==========
-  - name: " 成都"
+  - name: "🇨🇳 成都"
     type: vmess
     server: 47.108.130.60
     port: 51691
@@ -68,7 +68,7 @@ proxies:
     udp: true
 
   # ========== 国外节点 ==========
-  - name: " 荷兰"
+  - name: "🇳🇱 荷兰"
     type: vmess
     server: 2a12:bec4:1822:163:1234:678:0:1c
     port: 8880
@@ -83,7 +83,7 @@ proxies:
     tls: false
     udp: true
 
-  - name: " 日本"
+  - name: "🇯🇵 日本"
     type: vmess
     server: 2001:2c0:100:415:17:cafe:110:1
     port: 25803
@@ -101,127 +101,126 @@ proxies:
 # 代理组配置
 proxy-groups:
   # ========== 主策略组 ==========
-  - name: " 节点选择"
+  - name: "🚀 节点选择"
     type: select
     proxies:
-      - " 自动选择"
-      - " 国外节点"
-      - " 国内节点"
-      - " 日本"
-      - " 荷兰"
-      - " 成都"
+      - "♻️ 自动选择"
+      - "🌐 国外节点"
+      - "🌏 国内节点"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
+      - "🇨🇳 成都"
       - "DIRECT"
 
   # ========== 自动选择组 ==========
-  - name: " 自动选择"
+  - name: "♻️ 自动选择"
     type: url-test
     proxies:
-      - " 日本"
-      - " 荷兰"
-      - " 成都"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
+      - "🇨🇳 成都"
     url: "https://www.gstatic.com/generate_204"
     interval: 300
     tolerance: 50
 
   # ========== 国外节点组 ==========
-  - name: " 国外节点"
+  - name: "🌐 国外节点"
     type: select
     proxies:
-      - " 国外自动"
-      - " 故障转移"
-      - " 日本"
-      - " 荷兰"
+      - "🌍 国外自动"
+      - "🔄 故障转移"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
       - "DIRECT"
 
-  - name: " 国外自动"
+  - name: "🌍 国外自动"
     type: url-test
     proxies:
-      - " 日本"
-      - " 荷兰"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
     url: "https://www.gstatic.com/generate_204"
     interval: 300
     tolerance: 50
 
-  - name: " 故障转移"
+  - name: "🔄 故障转移"
     type: fallback
     proxies:
-      - " 日本"
-      - " 荷兰"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
     url: "https://www.gstatic.com/generate_204"
     interval: 300
 
-  # ========== 国内节点组 ==========
-  - name: " 国内节点"
+  # ========== 国内节点组（强制走成都）==========
+  - name: "🌏 国内节点"
     type: select
     proxies:
-      - " 成都"
-      - "DIRECT"
+      - "🇨🇳 成都"
 
   # ========== 常用服务分流 ==========
-  - name: " YouTube"
+  - name: "📹 YouTube"
     type: select
     proxies:
-      - " 国外节点"
-      - " 日本"
-      - " 荷兰"
-      - " 节点选择"
+      - "🌐 国外节点"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
+      - "🚀 节点选择"
 
-  - name: " Netflix"
+  - name: "🎬 Netflix"
     type: select
     proxies:
-      - " 国外节点"
-      - " 日本"
-      - " 荷兰"
-      - " 节点选择"
+      - "🌐 国外节点"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
+      - "🚀 节点选择"
 
-  - name: " Twitter"
+  - name: "🐦 Twitter"
     type: select
     proxies:
-      - " 国外节点"
-      - " 日本"
-      - " 荷兰"
-      - " 节点选择"
+      - "🌐 国外节点"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
+      - "🚀 节点选择"
 
-  - name: " Telegram"
+  - name: "💬 Telegram"
     type: select
     proxies:
-      - " 国外节点"
-      - " 日本"
-      - " 荷兰"
-      - " 节点选择"
+      - "🌐 国外节点"
+      - "🇯🇵 日本"
+      - "🇳🇱 荷兰"
+      - "🚀 节点选择"
 
-  - name: " Apple"
-    type: select
-    proxies:
-      - "DIRECT"
-      - " 国内节点"
-      - " 国外节点"
-
-  - name: " 游戏平台"
+  - name: "🍎 Apple"
     type: select
     proxies:
       - "DIRECT"
-      - " 国外节点"
-      - " 节点选择"
+      - "🌏 国内节点"
+      - "🌐 国外节点"
 
-  - name: " 全球直连"
+  - name: "🎮 游戏平台"
     type: select
     proxies:
       - "DIRECT"
-      - " 节点选择"
+      - "🌐 国外节点"
+      - "🚀 节点选择"
 
-  - name: " 广告拦截"
+  - name: "🎯 全球直连"
+    type: select
+    proxies:
+      - "DIRECT"
+      - "🚀 节点选择"
+
+  - name: "🛑 广告拦截"
     type: select
     proxies:
       - "REJECT"
       - "DIRECT"
 
-  - name: " 漏网之鱼"
+  - name: "🐟 漏网之鱼"
     type: select
     proxies:
-      - " 节点选择"
-      - " 国外节点"
-      - " 国内节点"
+      - "🚀 节点选择"
+      - "🌐 国外节点"
+      - "🌏 国内节点"
       - "DIRECT"
 
 # 分流规则
@@ -236,5 +235,77 @@ rules:
   - IP-CIDR6,fe80::/10,DIRECT
 
   # ========== 广告拦截 ==========
-  - DOMAIN-SUFFIX,ad.com, 广告拦截
-  - DOMAIN-KEYWORD,adse
+  - DOMAIN-SUFFIX,ad.com,🛑 广告拦截
+  - DOMAIN-KEYWORD,adservice,🛑 广告拦截
+  - DOMAIN-KEYWORD,analytics,🛑 广告拦截
+  - DOMAIN-SUFFIX,doubleclick.net,🛑 广告拦截
+
+  # ========== YouTube ==========
+  - DOMAIN-SUFFIX,youtube.com,📹 YouTube
+  - DOMAIN-SUFFIX,googlevideo.com,📹 YouTube
+  - DOMAIN-SUFFIX,ytimg.com,📹 YouTube
+  - DOMAIN-KEYWORD,youtube,📹 YouTube
+
+  # ========== Netflix ==========
+  - DOMAIN-SUFFIX,netflix.com,🎬 Netflix
+  - DOMAIN-SUFFIX,nflxvideo.net,🎬 Netflix
+  - DOMAIN-SUFFIX,nflximg.net,🎬 Netflix
+  - DOMAIN-SUFFIX,nflxext.com,🎬 Netflix
+
+  # ========== Twitter ==========
+  - DOMAIN-SUFFIX,twitter.com,🐦 Twitter
+  - DOMAIN-SUFFIX,twimg.com,🐦 Twitter
+  - DOMAIN-SUFFIX,t.co,🐦 Twitter
+  - DOMAIN-SUFFIX,x.com,🐦 Twitter
+
+  # ========== Telegram ==========
+  - DOMAIN-SUFFIX,telegram.org,💬 Telegram
+  - DOMAIN-SUFFIX,t.me,💬 Telegram
+  - DOMAIN-SUFFIX,tdesktop.com,💬 Telegram
+  - IP-CIDR,91.108.4.0/22,💬 Telegram
+  - IP-CIDR,91.108.8.0/22,💬 Telegram
+  - IP-CIDR,91.108.12.0/22,💬 Telegram
+  - IP-CIDR,91.108.16.0/22,💬 Telegram
+  - IP-CIDR,91.108.56.0/22,💬 Telegram
+  - IP-CIDR,149.154.160.0/20,💬 Telegram
+
+  # ========== Apple 服务 ==========
+  - DOMAIN-SUFFIX,apple.com,🍎 Apple
+  - DOMAIN-SUFFIX,icloud.com,🍎 Apple
+  - DOMAIN-SUFFIX,apple.com.cn,🍎 Apple
+  - DOMAIN-SUFFIX,cdn-apple.com,🍎 Apple
+  - DOMAIN-SUFFIX,appsto.re,🍎 Apple
+
+  # ========== 常见国外服务 ==========
+  - DOMAIN-SUFFIX,google.com,🌐 国外节点
+  - DOMAIN-SUFFIX,googleapis.com,🌐 国外节点
+  - DOMAIN-SUFFIX,gstatic.com,🌐 国外节点
+  - DOMAIN-SUFFIX,facebook.com,🌐 国外节点
+  - DOMAIN-SUFFIX,instagram.com,🌐 国外节点
+  - DOMAIN-SUFFIX,whatsapp.com,🌐 国外节点
+  - DOMAIN-SUFFIX,github.com,🌐 国外节点
+  - DOMAIN-SUFFIX,githubusercontent.com,🌐 国外节点
+  - DOMAIN-SUFFIX,reddit.com,🌐 国外节点
+  - DOMAIN-SUFFIX,amazon.com,🌐 国外节点
+
+  # ========== 游戏平台 ==========
+  - DOMAIN-SUFFIX,steampowered.com,🎮 游戏平台
+  - DOMAIN-SUFFIX,steamcommunity.com,🎮 游戏平台
+  - DOMAIN-SUFFIX,epicgames.com,🎮 游戏平台
+  - DOMAIN-SUFFIX,twitch.tv,🎮 游戏平台
+
+  # ========== 中国大陆服务 ==========
+  - DOMAIN-SUFFIX,baidu.com,🎯 全球直连
+  - DOMAIN-SUFFIX,qq.com,🎯 全球直连
+  - DOMAIN-SUFFIX,taobao.com,🎯 全球直连
+  - DOMAIN-SUFFIX,alipay.com,🎯 全球直连
+  - DOMAIN-SUFFIX,weibo.com,🎯 全球直连
+  - DOMAIN-SUFFIX,bilibili.com,🎯 全球直连
+  - DOMAIN-SUFFIX,douyin.com,🎯 全球直连
+
+  # ========== GeoIP 规则 ==========
+  - GEOIP,CN,🌏 国内节点
+  - GEOSITE,CN,🌏 国内节点
+
+  # ========== 最终规则 ==========
+  - MATCH,🐟 漏网之鱼
