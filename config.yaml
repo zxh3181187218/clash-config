@@ -1,26 +1,58 @@
 mixed-port: 7890
 allow-lan: true
+bind-address: '*'
 mode: rule
 log-level: info
+ipv6: true
 
+# 外部控制
+external-controller: 127.0.0.1:9090
+secret: ""
+
+# DNS 配置
 dns:
   enable: true
   listen: 0.0.0.0:53
   ipv6: true
   enhanced-mode: fake-ip
-  nameserver:
-    - 223.5.5.5        # 阿里DNS
-    - 119.29.29.29     # 腾讯DNS
-  fallback:
-    - 1.1.1.1
-    - 8.8.8.8
+  fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
     - "*.lan"
-    - "localhost"
+    - "*.local"
+    - "localhost.ptlogin2.qq.com"
+    - "+.srv.nintendo.net"
+    - "+.stun.playstation.net"
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+    - "xbox.*.microsoft.com"
+    - "*.battlenet.com.cn"
+    - "*.battlenet.com"
+    - "*.blzstatic.cn"
+    - "*.battle.net"
+  
+  # 国内 DNS 服务器
+  nameserver:
+    - 223.5.5.5        # 阿里 DNS
+    - 119.29.29.29     # 腾讯 DNS
+    - 114.114.114.114  # 114 DNS
+  
+  # 国外 DNS 服务器（使用 DoH）
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+    - https://dns.google/dns-query
+  
+  # DNS 分流策略
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
 
+# 代理节点配置
 proxies:
-  # 成都节点
-  - name: "🇨🇳 成都"
+  # ========== 国内节点 ==========
+  - name: " 成都"
     type: vmess
     server: 47.108.130.60
     port: 51691
@@ -33,9 +65,10 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
     tls: false
+    udp: true
 
-  # 荷兰节点
-  - name: "🇳🇱 荷兰"
+  # ========== 国外节点 ==========
+  - name: " 荷兰"
     type: vmess
     server: 2a12:bec4:1822:163:1234:678:0:1c
     port: 8880
@@ -48,9 +81,9 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
     tls: false
+    udp: true
 
-  # 日本节点
-  - name: "🇯🇵 日本"
+  - name: " 日本"
     type: vmess
     server: 2001:2c0:100:415:17:cafe:110:1
     port: 25803
@@ -63,51 +96,145 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
     tls: false
+    udp: true
 
+# 代理组配置
 proxy-groups:
-  # 国外自动测速组
-  - name: "🌍 国外自动选择"
+  # ========== 主策略组 ==========
+  - name: " 节点选择"
+    type: select
+    proxies:
+      - " 自动选择"
+      - " 国外节点"
+      - " 国内节点"
+      - " 日本"
+      - " 荷兰"
+      - " 成都"
+      - "DIRECT"
+
+  # ========== 自动选择组 ==========
+  - name: " 自动选择"
     type: url-test
     proxies:
-      - "🇯🇵 日本"
-      - "🇳🇱 荷兰"
+      - " 日本"
+      - " 荷兰"
+      - " 成都"
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    tolerance: 50
+
+  # ========== 国外节点组 ==========
+  - name: " 国外节点"
+    type: select
+    proxies:
+      - " 国外自动"
+      - " 故障转移"
+      - " 日本"
+      - " 荷兰"
+      - "DIRECT"
+
+  - name: " 国外自动"
+    type: url-test
+    proxies:
+      - " 日本"
+      - " 荷兰"
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+    tolerance: 50
+
+  - name: " 故障转移"
+    type: fallback
+    proxies:
+      - " 日本"
+      - " 荷兰"
     url: "https://www.gstatic.com/generate_204"
     interval: 300
 
-  # 国外选择组（可手动选择）
-  - name: "🌐 国外节点"
+  # ========== 国内节点组 ==========
+  - name: " 国内节点"
     type: select
     proxies:
-      - "🌍 国外自动选择"
-      - "🇯🇵 日本"
-      - "🇳🇱 荷兰"
-
-  # 国内节点组
-  - name: "🌏 国内节点"
-    type: select
-    proxies:
-      - "🇨🇳 成都"
+      - " 成都"
       - "DIRECT"
 
-  # 主策略组（智能分流）
-  - name: "🚀 节点选择"
+  # ========== 常用服务分流 ==========
+  - name: " YouTube"
     type: select
     proxies:
-      - "🌏 国内节点"
-      - "🌐 国外节点"
+      - " 国外节点"
+      - " 日本"
+      - " 荷兰"
+      - " 节点选择"
+
+  - name: " Netflix"
+    type: select
+    proxies:
+      - " 国外节点"
+      - " 日本"
+      - " 荷兰"
+      - " 节点选择"
+
+  - name: " Twitter"
+    type: select
+    proxies:
+      - " 国外节点"
+      - " 日本"
+      - " 荷兰"
+      - " 节点选择"
+
+  - name: " Telegram"
+    type: select
+    proxies:
+      - " 国外节点"
+      - " 日本"
+      - " 荷兰"
+      - " 节点选择"
+
+  - name: " Apple"
+    type: select
+    proxies:
+      - "DIRECT"
+      - " 国内节点"
+      - " 国外节点"
+
+  - name: " 游戏平台"
+    type: select
+    proxies:
+      - "DIRECT"
+      - " 国外节点"
+      - " 节点选择"
+
+  - name: " 全球直连"
+    type: select
+    proxies:
+      - "DIRECT"
+      - " 节点选择"
+
+  - name: " 广告拦截"
+    type: select
+    proxies:
+      - "REJECT"
       - "DIRECT"
 
+  - name: " 漏网之鱼"
+    type: select
+    proxies:
+      - " 节点选择"
+      - " 国外节点"
+      - " 国内节点"
+      - "DIRECT"
+
+# 分流规则
 rules:
-  # 直连规则（内网、本机）
+  # ========== 本地网络直连 ==========
   - DOMAIN-SUFFIX,local,DIRECT
   - IP-CIDR,127.0.0.0/8,DIRECT
   - IP-CIDR,192.168.0.0/16,DIRECT
   - IP-CIDR,10.0.0.0/8,DIRECT
   - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,224.0.0.0/4,DIRECT
+  - IP-CIDR6,fe80::/10,DIRECT
 
-  # 中国大陆域名走成都节点
-  - GEOIP,CN,🌏 国内节点
-  - GEOSITE,cn,🌏 国内节点
-
-  # 其他全部国外流量
-  - MATCH,🌐 国外节点
+  # ========== 广告拦截 ==========
+  - DOMAIN-SUFFIX,ad.com, 广告拦截
+  - DOMAIN-KEYWORD,adse
