@@ -88,7 +88,7 @@ proxies:
     obfs:
       type: salamander
       salamander-password: "96Jj12oLbwuEQOrZ39"
-    up: "50 Mbps"
+    up: "100 Mbps"
     down: "200 Mbps"
     fast-open: true
 
@@ -98,7 +98,6 @@ proxy-groups:
     type: select
     proxies:
       - "成都节点"
-    interface-name: "WLAN|Ethernet"  # 可选：绑定网卡
 
   - name: "国外分流"
     type: url-test
@@ -116,14 +115,6 @@ proxy-groups:
       - "国外分流"
       - "国内分流"
       - DIRECT
-    use:
-      - ""
-
-  - name: "最终兜底"
-    type: select
-    proxies:
-      - DIRECT
-      - "国外分流"
 
 # ===== 规则集 =====
 rules:
