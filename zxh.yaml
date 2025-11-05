@@ -1,0 +1,165 @@
+# Clash Meta 配置文件
+# 适用于 Clash Meta 内核
+
+# 混合端口，HTTP 和 SOCKS5 用一个端口
+mixed-port: 7890
+
+# HTTP 代理端口
+# port: 7890
+
+# SOCKS5 代理端口
+# socks-port: 7891
+
+# 允许局域网连接
+allow-lan: false
+
+# 绑定 IP 地址，仅作用于 allow-lan 为 true
+# bind-address: "*"
+
+# Clash 路由工作模式
+# rule: 规则模式（默认）
+# global: 全局模式
+# direct: 直连模式
+mode: rule
+
+# 日志级别
+# silent / error / warning / info / debug
+log-level: info
+
+# 外部控制器
+external-controller: 127.0.0.1:9090
+
+# 外部 UI
+# external-ui: folder
+
+# RESTful API 密钥
+# secret: ""
+
+# 实验性功能
+experimental:
+  # 忽略解析失败的域名
+  ignore-resolve-fail: true
+
+# DNS 配置
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - localhost.ptlogin2.qq.com
+  nameserver:
+    - 119.29.29.29
+    - 223.5.5.5
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+# 代理节点
+proxies:
+  - name: "VLESS-Reality"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: 7d1cbe5789dfd04b
+    client-fingerprint: chrome
+
+  - name: "Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 3n5T8b9NhTZe5cm2NW
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
+    obfs: salamander
+    obfs-password: 96Jj12oLbwuEQOrZ39
+    alpn:
+      - h3
+
+# 策略组
+proxy-groups:
+  - name: "🚀 节点选择"
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - VLESS-Reality
+      - Hysteria2
+      - DIRECT
+
+  - name: "♻️ 自动选择"
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    proxies:
+      - VLESS-Reality
+      - Hysteria2
+
+  - name: "🎯 全球直连"
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+
+  - name: "🛑 广告拦截"
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - 🎯 全球直连
+      - ♻️ 自动选择
+
+# 规则
+rules:
+  # 局域网地址
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,17.0.0.0/8,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT
+
+  # 广告拦截
+  - DOMAIN-KEYWORD,adservice,🛑 广告拦截
+  - DOMAIN-SUFFIX,googlesyndication.com,🛑 广告拦截
+  - DOMAIN-SUFFIX,googleadservices.com,🛑 广告拦截
+
+  # 常用国际服务
+  - DOMAIN-SUFFIX,google.com,🚀 节点选择
+  - DOMAIN-SUFFIX,youtube.com,🚀 节点选择
+  - DOMAIN-SUFFIX,facebook.com,🚀 节点选择
+  - DOMAIN-SUFFIX,twitter.com,🚀 节点选择
+  - DOMAIN-SUFFIX,telegram.org,🚀 节点选择
+  - DOMAIN-SUFFIX,openai.com,🚀 节点选择
+  - DOMAIN-SUFFIX,github.com,🚀 节点选择
+  - DOMAIN-SUFFIX,netflix.com,🚀 节点选择
+
+  # 国内网站直连
+  - DOMAIN-SUFFIX,cn,🎯 全球直连
+  - DOMAIN-KEYWORD,-cn,🎯 全球直连
+  - DOMAIN-SUFFIX,baidu.com,🎯 全球直连
+  - DOMAIN-SUFFIX,taobao.com,🎯 全球直连
+  - DOMAIN-SUFFIX,qq.com,🎯 全球直连
+  - DOMAIN-SUFFIX,weixin.qq.com,🎯 全球直连
+  - DOMAIN-SUFFIX,bilibili.com,🎯 全球直连
+
+  # 中国 IP 直连
+  - GEOIP,CN,🎯 全球直连
+
+  # 最终规则
+  - MATCH,🐟 漏网之鱼
