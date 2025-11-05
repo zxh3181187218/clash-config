@@ -113,7 +113,7 @@ rules:
   - GEOIP,LAN,国内分流
   - GEOSITE,cn,国内分流
   - GEOIP,CN,国内分流
-  - GEOSITE,geolocation-!cn,国外分流
+  - GEOSITE,geolocation-non-cn,国外分流 # <-- 这一行就是修改的地方
   - GEOIP,!CN,国外分流
   - DOMAIN-SUFFIX,googleapis.cn,国内分流
   - DOMAIN-SUFFIX,gstatic.com,国外分流
