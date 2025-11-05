@@ -1,0 +1,252 @@
+# Clash Meta 配置文件 - 美国节点
+
+# 混合端口，HTTP 和 SOCKS5 用一个端口
+mixed-port: 7890
+
+# 允许局域网的连接
+allow-lan: true
+
+# Clash 的 RESTful API 监听地址
+external-controller: 127.0.0.1:9090
+
+# 规则模式：rule（规则） / global（全局代理）/ direct（全局直连）
+mode: rule
+
+# 日志级别：info / warning / error / debug / silent
+log-level: info
+
+# DNS 配置 - 防止 DNS 泄露
+dns:
+  enable: true
+  # 优先使用 DoH（DNS over HTTPS）
+  prefer-h3: true
+  # 监听地址
+  listen: 0.0.0.0:53
+  # 使用 fake-ip 模式，避免 DNS 泄露
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  
+  # fake-ip 过滤，以下域名不使用 fake-ip
+  fake-ip-filter:
+    - '*.lan'
+    - 'localhost.ptlogin2.qq.com'
+    - '+.srv.nintendo.net'
+    - '+.stun.playstation.net'
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+    - '+.xboxlive.com'
+    - 'msftconnecttest.com'
+    - 'xbox.*.microsoft.com'
+    - '*.battlenet.com.cn'
+    - '*.battlenet.com'
+    - '*.blzstatic.cn'
+    - '*.battle.net'
+  
+  # 默认 DNS 服务器
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  
+  # 主 DNS 服务器（通过代理的加密 DNS）
+  nameserver:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - https://1.1.1.1/dns-query
+  
+  # 备用 DNS（通过代理查询）
+  fallback:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - tls://8.8.8.8:853
+    - tls://1.1.1.1:853
+  
+  # fallback 过滤器
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
+# 代理节点配置
+proxies:
+  # 美国节点 - VLESS Reality
+  - name: "美国-VLESS"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: 7d1cbe5789dfd04b
+    client-fingerprint: chrome
+
+  # 美国节点 - Hysteria2
+  - name: "美国-Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 3n5T8b9NhTZe5cm2NW
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
+    obfs: salamander
+    obfs-password: 96Jj12oLbwuEQOrZ39
+
+# 代理组配置
+proxy-groups:
+  # 主代理选择组
+  - name: "PROXY"
+    type: select
+    proxies:
+      - "自动选择"
+      - "美国-VLESS"
+      - "美国-Hysteria2"
+      - DIRECT
+
+  # 自动选择最低延迟节点
+  - name: "自动选择"
+    type: url-test
+    proxies:
+      - "美国-VLESS"
+      - "美国-Hysteria2"
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+    tolerance: 50
+
+  # 流媒体服务
+  - name: "流媒体"
+    type: select
+    proxies:
+      - "美国-Hysteria2"
+      - "美国-VLESS"
+      - "自动选择"
+
+  # Telegram
+  - name: "Telegram"
+    type: select
+    proxies:
+      - "美国-VLESS"
+      - "美国-Hysteria2"
+      - "自动选择"
+
+  # OpenAI / ChatGPT
+  - name: "OpenAI"
+    type: select
+    proxies:
+      - "美国-VLESS"
+      - "美国-Hysteria2"
+      - "自动选择"
+
+  # 国内网站直连
+  - name: "国内直连"
+    type: select
+    proxies:
+      - DIRECT
+      - "PROXY"
+
+# 规则配置
+rules:
+  # ========== Telegram ==========
+  - DOMAIN-SUFFIX,t.me,Telegram
+  - DOMAIN-SUFFIX,telegram.org,Telegram
+  - DOMAIN-SUFFIX,telegram.me,Telegram
+  - IP-CIDR,91.108.4.0/22,Telegram,no-resolve
+  - IP-CIDR,91.108.8.0/22,Telegram,no-resolve
+  - IP-CIDR,91.108.56.0/22,Telegram,no-resolve
+  - IP-CIDR,149.154.160.0/20,Telegram,no-resolve
+
+  # ========== OpenAI / ChatGPT ==========
+  - DOMAIN-SUFFIX,openai.com,OpenAI
+  - DOMAIN-SUFFIX,chatgpt.com,OpenAI
+  - DOMAIN-SUFFIX,oaistatic.com,OpenAI
+  - DOMAIN-SUFFIX,oaiusercontent.com,OpenAI
+  - DOMAIN-KEYWORD,openai,OpenAI
+
+  # ========== 流媒体 ==========
+  # YouTube
+  - DOMAIN-SUFFIX,youtube.com,流媒体
+  - DOMAIN-SUFFIX,ytimg.com,流媒体
+  - DOMAIN-SUFFIX,googlevideo.com,流媒体
+  - DOMAIN-KEYWORD,youtube,流媒体
+  
+  # Netflix
+  - DOMAIN-SUFFIX,netflix.com,流媒体
+  - DOMAIN-SUFFIX,nflxvideo.net,流媒体
+  - DOMAIN-SUFFIX,nflximg.net,流媒体
+  - DOMAIN-KEYWORD,netflix,流媒体
+  
+  # 其他流媒体
+  - DOMAIN-SUFFIX,spotify.com,流媒体
+  - DOMAIN-SUFFIX,twitch.tv,流媒体
+  - DOMAIN-SUFFIX,hulu.com,流媒体
+  - DOMAIN-SUFFIX,primevideo.com,流媒体
+  - DOMAIN-SUFFIX,disneyplus.com,流媒体
+  - DOMAIN-KEYWORD,spotify,流媒体
+
+  # ========== Google 服务 ==========
+  - DOMAIN-SUFFIX,google.com,PROXY
+  - DOMAIN-SUFFIX,googleapis.com,PROXY
+  - DOMAIN-SUFFIX,googleusercontent.com,PROXY
+  - DOMAIN-SUFFIX,gstatic.com,PROXY
+  - DOMAIN-KEYWORD,google,PROXY
+
+  # ========== 社交媒体 ==========
+  - DOMAIN-SUFFIX,facebook.com,PROXY
+  - DOMAIN-SUFFIX,instagram.com,PROXY
+  - DOMAIN-SUFFIX,twitter.com,PROXY
+  - DOMAIN-SUFFIX,x.com,PROXY
+  - DOMAIN-SUFFIX,reddit.com,PROXY
+  - DOMAIN-SUFFIX,discord.com,PROXY
+  - DOMAIN-SUFFIX,tiktok.com,PROXY
+
+  # ========== 技术网站 ==========
+  - DOMAIN-SUFFIX,github.com,PROXY
+  - DOMAIN-SUFFIX,githubusercontent.com,PROXY
+  - DOMAIN-SUFFIX,stackoverflow.com,PROXY
+  - DOMAIN-SUFFIX,medium.com,PROXY
+  - DOMAIN-SUFFIX,cloudflare.com,PROXY
+
+  # ========== 其他常用国外服务 ==========
+  - DOMAIN-SUFFIX,wikipedia.org,PROXY
+  - DOMAIN-SUFFIX,wikimedia.org,PROXY
+  - DOMAIN-SUFFIX,amazon.com,PROXY
+  - DOMAIN-SUFFIX,ebay.com,PROXY
+  - DOMAIN-SUFFIX,paypal.com,PROXY
+
+  # ========== 国内网站直连 ==========
+  # 国内常用应用
+  - DOMAIN-KEYWORD,baidu,国内直连
+  - DOMAIN-KEYWORD,taobao,国内直连
+  - DOMAIN-KEYWORD,tmall,国内直连
+  - DOMAIN-KEYWORD,alipay,国内直连
+  - DOMAIN-KEYWORD,aliyun,国内直连
+  - DOMAIN-KEYWORD,qq,国内直连
+  - DOMAIN-KEYWORD,wechat,国内直连
+  - DOMAIN-KEYWORD,weixin,国内直连
+  - DOMAIN-KEYWORD,tencent,国内直连
+  - DOMAIN-KEYWORD,douyin,国内直连
+  - DOMAIN-KEYWORD,jd,国内直连
+  - DOMAIN-KEYWORD,bilibili,国内直连
+  - DOMAIN-KEYWORD,zhihu,国内直连
+  - DOMAIN-KEYWORD,163,国内直连
+  - DOMAIN-KEYWORD,netease,国内直连
+  
+  # 国内域名后缀
+  - DOMAIN-SUFFIX,cn,国内直连
+  - DOMAIN-SUFFIX,com.cn,国内直连
+  
+  # 中国大陆 IP 段直连
+  - GEOIP,CN,国内直连
+
+  # ========== 局域网直连 ==========
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+
+  # ========== 最终规则 ==========
+  - MATCH,PROXY
