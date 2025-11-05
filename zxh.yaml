@@ -1,0 +1,229 @@
+mixed-port: 7890
+
+# HTTP 代理端口
+# port: 7890
+
+# SOCKS5 代理端口
+# socks-port: 7891
+
+# 允许局域网连接
+allow-lan: false
+
+# 绑定 IP 地址，仅作用于 allow-lan 为 true
+# bind-address: "*"
+
+# Clash 路由工作模式
+# rule: 规则模式（默认）
+# global: 全局模式
+# direct: 直连模式
+mode: rule
+
+# 日志级别
+# silent / error / warning / info / debug
+log-level: info
+
+# 外部控制器
+external-controller: 127.0.0.1:9090
+
+# 外部 UI
+# external-ui: folder
+
+# RESTful API 密钥
+# secret: ""
+
+# 实验性功能
+experimental:
+  # 忽略解析失败的域名
+  ignore-resolve-fail: true
+
+# DNS 配置
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - localhost.ptlogin2.qq.com
+  nameserver:
+    - 119.29.29.29
+    - 223.5.5.5
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+# 代理节点
+proxies:
+  - name: "VLESS-Reality"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: 7d1cbe5789dfd04b
+    client-fingerprint: chrome
+
+  - name: "Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 3n5T8b9NhTZe5cm2NW
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
+    obfs: salamander
+    obfs-password: 96Jj12oLbwuEQOrZ39
+    alpn:
+      - h3
+
+  # 成都节点
+  - name: "🇨🇳 成都"
+    type: vmess
+    server: 47.108.130.60
+    port: 51691
+    uuid: 51329a89-76f0-42e2-f7d9-d660147e4b15
+    alterId: 0
+    cipher: auto
+    udp: true
+    tls: false
+    skip-cert-verify: false
+    network: ws
+    ws-opts:
+      path: /
+      headers:
+        Host: pull.free.video.10010.com
+
+# 策略组
+proxy-groups:
+  - name: "🚀 节点选择"
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🇺🇸 美国节点
+      - 🇨🇳 国内节点
+      - VLESS-Reality
+      - Hysteria2
+      - 🇨🇳 成都
+      - DIRECT
+
+  - name: "🇺🇸 美国节点"
+    type: select
+    proxies:
+      - VLESS-Reality
+      - Hysteria2
+
+  - name: "🇨🇳 国内节点"
+    type: select
+    proxies:
+      - 🇨🇳 成都
+
+  - name: "♻️ 自动选择"
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    proxies:
+      - VLESS-Reality
+      - Hysteria2
+      - 🇨🇳 成都
+
+  - name: "🌍 国外网站"
+    type: select
+    proxies:
+      - 🇺🇸 美国节点
+      - 🚀 节点选择
+
+  - name: "🏠 国内网站"
+    type: select
+    proxies:
+      - 🇨🇳 国内节点
+      - DIRECT
+
+  - name: "🎯 全球直连"
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+
+  - name: "🛑 广告拦截"
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - 🎯 全球直连
+      - ♻️ 自动选择
+
+# 规则
+rules:
+  # 局域网地址
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,17.0.0.0/8,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT
+
+  # 广告拦截
+  - DOMAIN-KEYWORD,adservice,🛑 广告拦截
+  - DOMAIN-SUFFIX,googlesyndication.com,🛑 广告拦截
+  - DOMAIN-SUFFIX,googleadservices.com,🛑 广告拦截
+
+  # 国外网站（使用美国节点）
+  - DOMAIN-SUFFIX,google.com,🌍 国外网站
+  - DOMAIN-SUFFIX,googleapis.com,🌍 国外网站
+  - DOMAIN-SUFFIX,googleusercontent.com,🌍 国外网站
+  - DOMAIN-SUFFIX,youtube.com,🌍 国外网站
+  - DOMAIN-SUFFIX,ytimg.com,🌍 国外网站
+  - DOMAIN-SUFFIX,facebook.com,🌍 国外网站
+  - DOMAIN-SUFFIX,twitter.com,🌍 国外网站
+  - DOMAIN-SUFFIX,x.com,🌍 国外网站
+  - DOMAIN-SUFFIX,telegram.org,🌍 国外网站
+  - DOMAIN-SUFFIX,t.me,🌍 国外网站
+  - DOMAIN-SUFFIX,openai.com,🌍 国外网站
+  - DOMAIN-SUFFIX,github.com,🌍 国外网站
+  - DOMAIN-SUFFIX,githubusercontent.com,🌍 国外网站
+  - DOMAIN-SUFFIX,netflix.com,🌍 国外网站
+  - DOMAIN-SUFFIX,instagram.com,🌍 国外网站
+  - DOMAIN-SUFFIX,whatsapp.com,🌍 国外网站
+  - DOMAIN-SUFFIX,reddit.com,🌍 国外网站
+  - DOMAIN-SUFFIX,wikipedia.org,🌍 国外网站
+  - DOMAIN-SUFFIX,cloudflare.com,🌍 国外网站
+
+  # 国内网站（使用成都节点）
+  - DOMAIN-SUFFIX,cn,🏠 国内网站
+  - DOMAIN-KEYWORD,-cn,🏠 国内网站
+  - DOMAIN-SUFFIX,baidu.com,🏠 国内网站
+  - DOMAIN-SUFFIX,taobao.com,🏠 国内网站
+  - DOMAIN-SUFFIX,tmall.com,🏠 国内网站
+  - DOMAIN-SUFFIX,jd.com,🏠 国内网站
+  - DOMAIN-SUFFIX,qq.com,🏠 国内网站
+  - DOMAIN-SUFFIX,weixin.qq.com,🏠 国内网站
+  - DOMAIN-SUFFIX,wechat.com,🏠 国内网站
+  - DOMAIN-SUFFIX,bilibili.com,🏠 国内网站
+  - DOMAIN-SUFFIX,zhihu.com,🏠 国内网站
+  - DOMAIN-SUFFIX,douyin.com,🏠 国内网站
+  - DOMAIN-SUFFIX,163.com,🏠 国内网站
+  - DOMAIN-SUFFIX,sina.com.cn,🏠 国内网站
+  - DOMAIN-SUFFIX,sohu.com,🏠 国内网站
+  - DOMAIN-SUFFIX,alipay.com,🏠 国内网站
+  - DOMAIN-SUFFIX,aliyun.com,🏠 国内网站
+  - DOMAIN-SUFFIX,tencent.com,🏠 国内网站
+  - DOMAIN-SUFFIX,10010.com,🏠 国内网站
+  - DOMAIN-SUFFIX,10086.cn,🏠 国内网站
+
+  # 中国 IP（使用成都节点）
+  - GEOIP,CN,🏠 国内网站
+
+  # 最终规则（其他流量使用美国节点）
+  - MATCH,🌍 国外网站
