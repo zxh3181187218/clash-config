@@ -5,7 +5,6 @@ log-level: warning
 external-controller: 127.0.0.1:9090
 secret: ""
 
-# ===== DNS 优化 =====
 dns:
   enable: true
   listen: 0.0.0.0:1053
@@ -27,21 +26,17 @@ dns:
   fallback:
     - 223.5.5.5
     - 114.114.114.114
-    - tls://dns.alidns.com:853
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
   nameserver-policy:
     "geosite:cn,private,apple-cn,government-cn":
       - 223.5.5.5
       - 114.114.114.114
-    "domain:googleapis.cn,gstatic.com,google.cn":
-      - 1.1.1.1
-      - 8.8.8.8
     "geosite:geolocation-!cn":
       - https://dns.google/dns-query
       - https://cloudflare-dns.com/dns-query
 
-# ===== 代理节点 =====
 proxies:
-  # === 成都节点 (国内优化) ===
   - name: "成都节点"
     type: vmess
     server: 47.108.130.60
@@ -58,7 +53,6 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
 
-  # === 美国节点 (Reality 推荐配置) ===
   - name: "美国节点"
     type: vless
     server: ipv6.zxh425.dpdns.org
@@ -75,7 +69,6 @@ proxies:
       short-id: "7d1cbe5789dfd04b"
       spider-x: ""
 
-  # === Hysteria2 备用节点（推荐）===
   - name: "HY2备用"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
@@ -85,13 +78,13 @@ proxies:
     skip-cert-verify: false
     alpn:
       - h3
-    obfs: salamander  # 修改为string类型
-    obfs-password: "96Jj12oLbwuEQOrZ39"  # 单独的密码字段
+    obfs:
+      type: salamander
+      password: "96Jj12oLbwuEQOrZ39"
     up: "100 Mbps"
     down: "200 Mbps"
     fast-open: true
 
-# ===== 代理组 =====
 proxy-groups:
   - name: "国内分流"
     type: select
@@ -111,30 +104,19 @@ proxy-groups:
   - name: "总代理"
     type: select
     proxies:
-      - "国外分流"
-      - "国内分流"
       - DIRECT
+      - "国内分流"
+      - "国外分流"
 
-# ===== 规则集 =====
 rules:
-  # 国内强制走成都节点（优先级最高）
+  - GEOSITE,private,国内分流
+  - GEOIP,LAN,国内分流
   - GEOSITE,cn,国内分流
   - GEOIP,CN,国内分流
-  - GEOSITE,private,国内分流
-  - GEOIP,PRIVATE,国内分流
-  - GEOIP,LAN,国内分流
-
-  # 国外强制走美国节点或HY2
   - GEOSITE,geolocation-!cn,国外分流
   - GEOIP,!CN,国外分流
-
-  # 特殊域名处理（国内节点）
   - DOMAIN-SUFFIX,googleapis.cn,国内分流
-  - DOMAIN-SUFFIX,gstatic.com,国内分流
-
-  # 防止泄漏
+  - DOMAIN-SUFFIX,gstatic.com,国外分流
   - DST-PORT,853,DIRECT
   - DST-PORT,53,DIRECT
-
-  # 兜底走国外
   - MATCH,国外分流
