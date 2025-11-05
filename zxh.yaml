@@ -1,89 +1,48 @@
-mixed-port: 7890
-
-# HTTP 代理端口
-# port: 7890
-
-# SOCKS5 代理端口
-# socks-port: 7891
-
-# 允许局域网连接
+mixed-port: 10808
 allow-lan: false
-
-# 绑定 IP 地址，仅作用于 allow-lan 为 true
-# bind-address: "*"
-
-# Clash 路由工作模式
-# rule: 规则模式（默认）
-# global: 全局模式
-# direct: 直连模式
 mode: rule
-
-# 日志级别
-# silent / error / warning / info / debug
-log-level: info
-
-# 外部控制器
+log-level: warning
 external-controller: 127.0.0.1:9090
+secret: ""
 
-# 外部 UI
-# external-ui: folder
-
-# RESTful API 密钥
-# secret: ""
-
-# 实验性功能
-experimental:
-  # 忽略解析失败的域名
-  ignore-resolve-fail: true
-
-# DNS 配置
+# ===== DNS 优化 =====
 dns:
   enable: true
-  listen: 0.0.0.0:53
-  ipv6: false
+  listen: 0.0.0.0:1053
+  ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
-    - '*.lan'
-    - localhost.ptlogin2.qq.com
-  nameserver:
-    - 119.29.29.29
+    - "*.lan"
+    - "*.local"
+    - "localhost.ptlogin2.qq.com"
+  default-nameserver:
     - 223.5.5.5
+    - 114.114.114.114
+  nameserver:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - 1.1.1.1
+    - 8.8.8.8
   fallback:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
+    - 223.5.5.5
+    - 114.114.114.114
+    - tls://dns.alidns.com:853
+  nameserver-policy:
+    "geosite:cn,private,apple-cn,government-cn":
+      - 223.5.5.5
+      - 114.114.114.114
+    "domain:googleapis.cn,gstatic.com,google.cn":
+      - 1.1.1.1
+      - 8.8.8.8
+    "geosite:geolocation-!cn":
+      - https://dns.google/dns-query
+      - https://cloudflare-dns.com/dns-query
 
-# 代理节点
+# ===== 代理节点 =====
 proxies:
-  - name: "VLESS-Reality"
-    type: vless
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
-    network: tcp
-    udp: true
-    tls: true
-    flow: xtls-rprx-vision
-    servername: gateway.icloud.com
-    reality-opts:
-      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
-      short-id: 7d1cbe5789dfd04b
-    client-fingerprint: chrome
-
-  - name: "Hysteria2"
-    type: hysteria2
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    password: 3n5T8b9NhTZe5cm2NW
-    sni: ipv6.zxh425.dpdns.org
-    skip-cert-verify: false
-    obfs: salamander
-    obfs-password: 96Jj12oLbwuEQOrZ39
-    alpn:
-      - h3
-
-  # 成都节点
-  - name: "🇨🇳 成都"
+  # === 成都节点 (国内优化) ===
+  - name: "成都节点"
     type: vmess
     server: 47.108.130.60
     port: 51691
@@ -91,139 +50,101 @@ proxies:
     alterId: 0
     cipher: auto
     udp: true
-    tls: false
-    skip-cert-verify: false
     network: ws
+    tls: false
+    skip-cert-verify: true
     ws-opts:
       path: /
       headers:
         Host: pull.free.video.10010.com
 
-# 策略组
+  # === 美国节点 (Reality 推荐配置) ===
+  - name: "美国节点"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    flow: xtls-rprx-vision
+    network: tcp
+    tls: true
+    skip-cert-verify: false
+    udp: true
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4"
+      short-id: "7d1cbe5789dfd04b"
+      spider-x: ""
+
+  # === Hysteria2 备用节点（推荐）===
+  - name: "HY2备用"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: "3n5T8b9NhTZe5cm2NW"
+    sni: "ipv6.zxh425.dpdns.org"
+    skip-cert-verify: false
+    alpn:
+      - h3
+    obfs:
+      type: salamander
+      salamander-password: "96Jj12oLbwuEQOrZ39"
+    up: "50 Mbps"
+    down: "200 Mbps"
+    fast-open: true
+
+# ===== 代理组 =====
 proxy-groups:
-  - name: "🚀 节点选择"
+  - name: "国内分流"
     type: select
     proxies:
-      - ♻️ 自动选择
-      - 🇺🇸 美国节点
-      - 🇨🇳 国内节点
-      - VLESS-Reality
-      - Hysteria2
-      - 🇨🇳 成都
-      - DIRECT
+      - "成都节点"
+    interface-name: "WLAN|Ethernet"  # 可选：绑定网卡
 
-  - name: "🇺🇸 美国节点"
-    type: select
-    proxies:
-      - VLESS-Reality
-      - Hysteria2
-
-  - name: "🇨🇳 国内节点"
-    type: select
-    proxies:
-      - 🇨🇳 成都
-
-  - name: "♻️ 自动选择"
+  - name: "国外分流"
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    proxies:
+      - "美国节点"
+      - "HY2备用"
+    url: "http://www.gstatic.com/generate_204"
     interval: 300
-    proxies:
-      - VLESS-Reality
-      - Hysteria2
-      - 🇨🇳 成都
+    tolerance: 50
+    lazy: true
 
-  - name: "🌍 国外网站"
+  - name: "总代理"
     type: select
     proxies:
-      - 🇺🇸 美国节点
-      - 🚀 节点选择
-
-  - name: "🏠 国内网站"
-    type: select
-    proxies:
-      - 🇨🇳 国内节点
+      - "国外分流"
+      - "国内分流"
       - DIRECT
+    use:
+      - ""
 
-  - name: "🎯 全球直连"
+  - name: "最终兜底"
     type: select
     proxies:
       - DIRECT
-      - 🚀 节点选择
+      - "国外分流"
 
-  - name: "🛑 广告拦截"
-    type: select
-    proxies:
-      - REJECT
-      - DIRECT
-
-  - name: "🐟 漏网之鱼"
-    type: select
-    proxies:
-      - 🚀 节点选择
-      - 🎯 全球直连
-      - ♻️ 自动选择
-
-# 规则
+# ===== 规则集 =====
 rules:
-  # 局域网地址
-  - DOMAIN-SUFFIX,local,DIRECT
-  - IP-CIDR,127.0.0.0/8,DIRECT
-  - IP-CIDR,172.16.0.0/12,DIRECT
-  - IP-CIDR,192.168.0.0/16,DIRECT
-  - IP-CIDR,10.0.0.0/8,DIRECT
-  - IP-CIDR,17.0.0.0/8,DIRECT
-  - IP-CIDR,100.64.0.0/10,DIRECT
+  # 国内强制走成都节点（优先级最高）
+  - GEOSITE,cn,国内分流
+  - GEOIP,CN,国内分流
+  - GEOSITE,private,国内分流
+  - GEOIP,PRIVATE,国内分流
+  - GEOIP,LAN,国内分流
 
-  # 广告拦截
-  - DOMAIN-KEYWORD,adservice,🛑 广告拦截
-  - DOMAIN-SUFFIX,googlesyndication.com,🛑 广告拦截
-  - DOMAIN-SUFFIX,googleadservices.com,🛑 广告拦截
+  # 国外强制走美国节点或HY2
+  - GEOSITE,geolocation-!cn,国外分流
+  - GEOIP,!CN,国外分流
 
-  # 国外网站（使用美国节点）
-  - DOMAIN-SUFFIX,google.com,🌍 国外网站
-  - DOMAIN-SUFFIX,googleapis.com,🌍 国外网站
-  - DOMAIN-SUFFIX,googleusercontent.com,🌍 国外网站
-  - DOMAIN-SUFFIX,youtube.com,🌍 国外网站
-  - DOMAIN-SUFFIX,ytimg.com,🌍 国外网站
-  - DOMAIN-SUFFIX,facebook.com,🌍 国外网站
-  - DOMAIN-SUFFIX,twitter.com,🌍 国外网站
-  - DOMAIN-SUFFIX,x.com,🌍 国外网站
-  - DOMAIN-SUFFIX,telegram.org,🌍 国外网站
-  - DOMAIN-SUFFIX,t.me,🌍 国外网站
-  - DOMAIN-SUFFIX,openai.com,🌍 国外网站
-  - DOMAIN-SUFFIX,github.com,🌍 国外网站
-  - DOMAIN-SUFFIX,githubusercontent.com,🌍 国外网站
-  - DOMAIN-SUFFIX,netflix.com,🌍 国外网站
-  - DOMAIN-SUFFIX,instagram.com,🌍 国外网站
-  - DOMAIN-SUFFIX,whatsapp.com,🌍 国外网站
-  - DOMAIN-SUFFIX,reddit.com,🌍 国外网站
-  - DOMAIN-SUFFIX,wikipedia.org,🌍 国外网站
-  - DOMAIN-SUFFIX,cloudflare.com,🌍 国外网站
+  # 特殊域名处理（国内节点）
+  - DOMAIN-SUFFIX,googleapis.cn,国内分流
+  - DOMAIN-SUFFIX,gstatic.com,国内分流
 
-  # 国内网站（使用成都节点）
-  - DOMAIN-SUFFIX,cn,🏠 国内网站
-  - DOMAIN-KEYWORD,-cn,🏠 国内网站
-  - DOMAIN-SUFFIX,baidu.com,🏠 国内网站
-  - DOMAIN-SUFFIX,taobao.com,🏠 国内网站
-  - DOMAIN-SUFFIX,tmall.com,🏠 国内网站
-  - DOMAIN-SUFFIX,jd.com,🏠 国内网站
-  - DOMAIN-SUFFIX,qq.com,🏠 国内网站
-  - DOMAIN-SUFFIX,weixin.qq.com,🏠 国内网站
-  - DOMAIN-SUFFIX,wechat.com,🏠 国内网站
-  - DOMAIN-SUFFIX,bilibili.com,🏠 国内网站
-  - DOMAIN-SUFFIX,zhihu.com,🏠 国内网站
-  - DOMAIN-SUFFIX,douyin.com,🏠 国内网站
-  - DOMAIN-SUFFIX,163.com,🏠 国内网站
-  - DOMAIN-SUFFIX,sina.com.cn,🏠 国内网站
-  - DOMAIN-SUFFIX,sohu.com,🏠 国内网站
-  - DOMAIN-SUFFIX,alipay.com,🏠 国内网站
-  - DOMAIN-SUFFIX,aliyun.com,🏠 国内网站
-  - DOMAIN-SUFFIX,tencent.com,🏠 国内网站
-  - DOMAIN-SUFFIX,10010.com,🏠 国内网站
-  - DOMAIN-SUFFIX,10086.cn,🏠 国内网站
+  # 防止泄漏
+  - DST-PORT,853,DIRECT
+  - DST-PORT,53,DIRECT
 
-  # 中国 IP（使用成都节点）
-  - GEOIP,CN,🏠 国内网站
-
-  # 最终规则（其他流量使用美国节点）
-  - MATCH,🌍 国外网站
+  # 兜底走国外
+  - MATCH,国外分流
