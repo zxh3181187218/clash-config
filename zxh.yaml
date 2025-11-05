@@ -78,8 +78,8 @@ proxies:
     skip-cert-verify: false
     alpn:
       - h3
-    obfs: "salamander" # <-- 修改点 1
-    obfs-password: "96Jj12oLbwuEQOrZ39" # <-- 修改点 2
+    obfs: "salamander" # <-- 已修正
+    obfs-password: "96Jj12oLbwuEQOrZ39" # <-- 已修正
     up: "100 Mbps"
     down: "200 Mbps"
     fast-open: true
@@ -112,7 +112,7 @@ rules:
   - GEOIP,LAN,国内分流
   - GEOSITE,cn,国内分流
   - GEOIP,CN,国内分流
-  - GEOSITE,geolocation-non-cn,国外分流 # <-- 这是第一个修改点
+  - GEOSITE,geolocation-non-cn,国外分流 # <-- 已修正
   - GEOIP,!CN,国外分流
   - DOMAIN-SUFFIX,googleapis.cn,国内分流
   - DOMAIN-SUFFIX,gstatic.com,国外分流
