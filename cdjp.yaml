@@ -1,0 +1,249 @@
+# Clash Meta 配置文件
+# 激进策略：只有被墙网站走代理，其他都走成都节点
+
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+external-controller: 127.0.0.1:9090
+
+# DNS 配置
+dns:
+  enable: true
+  ipv6: true
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - 'localhost.ptlogin2.qq.com'
+  
+  # 默认使用国内 DNS
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  
+  # 主要使用国内 DNS 解析
+  nameserver:
+    - https://223.5.5.5/dns-query  # 阿里 DNS
+    - https://doh.pub/dns-query     # 腾讯 DNS
+  
+  # 被墙域名使用国外 DNS
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  
+  # DNS 污染检测
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    # 如果国内 DNS 返回这些 IP，说明是污染结果
+    ipcidr:
+      - 240.0.0.0/4
+      - 0.0.0.0/32
+      - 127.0.0.1/32
+
+# 代理节点
+proxies:
+  - name: "荷兰🇳🇱"
+    type: vmess
+    server: 2a12:bec4:1822:163:1234:678:0:1c
+    port: 8880
+    uuid: 6fff946b-d37e-4304-accc-055796fefe84
+    alterId: 0
+    cipher: auto
+    udp: true
+    network: ws
+    ws-opts:
+      path: /6fff946b-d37e-4304-accc-055796fefe84-vm
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "成都节点"
+    type: vmess
+    server: 47.108.130.60
+    port: 51691
+    uuid: 5132a9a8-76f0-42e2-f7d9-d660147e4b15
+    alterId: 0
+    cipher: auto
+    udp: true
+    network: ws
+    ws-opts:
+      path: /
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "日本🇯🇵"
+    type: vmess
+    server: 2001:2c0:100:415:17:cafe:110:1
+    port: 25803
+    uuid: 01f5273a-4bd7-427b-bdb4-0066690eb890
+    alterId: 0
+    cipher: auto
+    udp: true
+    network: ws
+    ws-opts:
+      path: /01f5273a-4bd7-427b-bdb4-0066690eb890-vm
+      headers:
+        Host: pull.free.video.10010.com
+
+# 策略组
+proxy-groups:
+  - name: "节点选择"
+    type: select
+    proxies:
+      - 成都节点
+      - 国外代理
+      - 荷兰🇳🇱
+      - 日本🇯🇵
+
+  - name: "国外代理"
+    type: load-balance
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    proxies:
+      - 荷兰🇳🇱
+      - 日本🇯🇵
+
+  - name: "被墙网站"
+    type: select
+    proxies:
+      - 国外代理
+      - 荷兰🇳🇱
+      - 日本🇯🇵
+
+# 规则 - 所有流量必须走代理
+rules:
+  # 本地局域网地址直连（仅限本机和局域网通信）
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,fe80::/10,DIRECT
+
+  # === 被墙的网站列表 - 走代理 ===
+  
+  # Google 系列
+  - DOMAIN-SUFFIX,google.com,被墙网站
+  - DOMAIN-SUFFIX,google.com.hk,被墙网站
+  - DOMAIN-SUFFIX,googleapis.com,被墙网站
+  - DOMAIN-SUFFIX,googleusercontent.com,被墙网站
+  - DOMAIN-SUFFIX,gstatic.com,被墙网站
+  - DOMAIN-SUFFIX,gmail.com,被墙网站
+  - DOMAIN-SUFFIX,youtube.com,被墙网站
+  - DOMAIN-SUFFIX,ytimg.com,被墙网站
+  - DOMAIN-SUFFIX,googlevideo.com,被墙网站
+  - DOMAIN-SUFFIX,youtu.be,被墙网站
+  - DOMAIN-SUFFIX,android.com,被墙网站
+  - DOMAIN-SUFFIX,gvt1.com,被墙网站
+  
+  # Facebook / Meta 系列
+  - DOMAIN-SUFFIX,facebook.com,被墙网站
+  - DOMAIN-SUFFIX,fb.com,被墙网站
+  - DOMAIN-SUFFIX,fbcdn.net,被墙网站
+  - DOMAIN-SUFFIX,instagram.com,被墙网站
+  - DOMAIN-SUFFIX,cdninstagram.com,被墙网站
+  - DOMAIN-SUFFIX,whatsapp.com,被墙网站
+  - DOMAIN-SUFFIX,whatsapp.net,被墙网站
+  
+  # Twitter / X
+  - DOMAIN-SUFFIX,twitter.com,被墙网站
+  - DOMAIN-SUFFIX,x.com,被墙网站
+  - DOMAIN-SUFFIX,twimg.com,被墙网站
+  - DOMAIN-SUFFIX,t.co,被墙网站
+  
+  # Telegram
+  - DOMAIN-SUFFIX,telegram.org,被墙网站
+  - DOMAIN-SUFFIX,t.me,被墙网站
+  - DOMAIN-SUFFIX,tdesktop.com,被墙网站
+  - DOMAIN-SUFFIX,telegra.ph,被墙网站
+  - DOMAIN-SUFFIX,telesco.pe,被墙网站
+  - IP-CIDR,91.108.4.0/22,被墙网站
+  - IP-CIDR,91.108.8.0/22,被墙网站
+  - IP-CIDR,91.108.12.0/22,被墙网站
+  - IP-CIDR,91.108.16.0/22,被墙网站
+  - IP-CIDR,91.108.56.0/22,被墙网站
+  - IP-CIDR,149.154.160.0/20,被墙网站
+  
+  # Wikipedia
+  - DOMAIN-SUFFIX,wikipedia.org,被墙网站
+  - DOMAIN-SUFFIX,wikimedia.org,被墙网站
+  
+  # GitHub (部分资源被墙)
+  - DOMAIN-SUFFIX,github.com,被墙网站
+  - DOMAIN-SUFFIX,githubusercontent.com,被墙网站
+  - DOMAIN-SUFFIX,github.io,被墙网站
+  - DOMAIN-SUFFIX,githubassets.com,被墙网站
+  
+  # Reddit
+  - DOMAIN-SUFFIX,reddit.com,被墙网站
+  - DOMAIN-SUFFIX,redd.it,被墙网站
+  - DOMAIN-SUFFIX,redditstatic.com,被墙网站
+  
+  # Pixiv
+  - DOMAIN-SUFFIX,pixiv.net,被墙网站
+  - DOMAIN-SUFFIX,pximg.net,被墙网站
+  
+  # Tumblr
+  - DOMAIN-SUFFIX,tumblr.com,被墙网站
+  
+  # Twitch
+  - DOMAIN-SUFFIX,twitch.tv,被墙网站
+  - DOMAIN-SUFFIX,twitchcdn.net,被墙网站
+  
+  # Discord
+  - DOMAIN-SUFFIX,discord.com,被墙网站
+  - DOMAIN-SUFFIX,discordapp.com,被墙网站
+  - DOMAIN-SUFFIX,discord.gg,被墙网站
+  
+  # Dropbox
+  - DOMAIN-SUFFIX,dropbox.com,被墙网站
+  - DOMAIN-SUFFIX,dropboxstatic.com,被墙网站
+  
+  # OneDrive (部分被墙)
+  - DOMAIN-SUFFIX,1drv.com,被墙网站
+  
+  # Medium
+  - DOMAIN-SUFFIX,medium.com,被墙网站
+  
+  # Vimeo
+  - DOMAIN-SUFFIX,vimeo.com,被墙网站
+  - DOMAIN-SUFFIX,vimeocdn.com,被墙网站
+  
+  # DuckDuckGo
+  - DOMAIN-SUFFIX,duckduckgo.com,被墙网站
+  
+  # BBC
+  - DOMAIN-SUFFIX,bbc.com,被墙网站
+  - DOMAIN-SUFFIX,bbc.co.uk,被墙网站
+  - DOMAIN-SUFFIX,bbci.co.uk,被墙网站
+  
+  # NYTimes
+  - DOMAIN-SUFFIX,nytimes.com,被墙网站
+  - DOMAIN-SUFFIX,nyt.com,被墙网站
+  
+  # Netflix (部分地区)
+  - DOMAIN-SUFFIX,netflix.com,被墙网站
+  - DOMAIN-SUFFIX,nflxvideo.net,被墙网站
+  
+  # Pornhub 等成人网站
+  - DOMAIN-KEYWORD,pornhub,被墙网站
+  - DOMAIN-KEYWORD,xvideos,被墙网站
+  - DOMAIN-KEYWORD,xnxx,被墙网站
+  
+  # 其他常见被墙服务
+  - DOMAIN-SUFFIX,openai.com,被墙网站
+  - DOMAIN-SUFFIX,anthropic.com,被墙网站
+  - DOMAIN-SUFFIX,claude.ai,被墙网站
+  - DOMAIN-SUFFIX,chatgpt.com,被墙网站
+  - DOMAIN-SUFFIX,perplexity.ai,被墙网站
+  - DOMAIN-SUFFIX,archive.org,被墙网站
+  - DOMAIN-SUFFIX,soundcloud.com,被墙网站
+  - DOMAIN-SUFFIX,voachinese.com,被墙网站
+  - DOMAIN-SUFFIX,rfi.fr,被墙网站
+  - DOMAIN-SUFFIX,dw.com,被墙网站
+  
+  # === 其他所有网站走成都节点 ===
+  - MATCH,成都节点
