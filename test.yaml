@@ -1,28 +1,25 @@
-
-# ===== 基础设置 =====
 port: 7890
 socks-port: 7891
 allow-lan: false
 mode: rule
 log-level: info
 external-controller: 127.0.0.1:9090
-secret: "your_password"  # 修改为自定义密码
+secret: "your_password"  # 请修改为您的密码
 
-# ===== 修复代理节点配置 =====
+# ===== 修复的代理节点 =====
 proxies:
-  # 修复的Hysteria2节点配置
+  # Hysteria2 节点 (兼容格式)
   - name: "🇺🇸 美国-Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
     password: "3n5T8b9NhTZe5cm2NW"
-    obfs: 
-      type: salamander
-      password: "96Jj12oLbwuEQOrZ39"
+    obfs: salamander
+    obfs-password: "96Jj12oLbwuEQOrZ39"
     sni: "ipv6.zxh425.dpdns.org"
     skip-cert-verify: false
 
-  # VLESS Reality节点 (保持正确)
+  # VLESS Reality 节点
   - name: "🇺🇸 美国-VLESS"
     type: vless
     server: ipv6.zxh425.dpdns.org
@@ -38,63 +35,76 @@ proxies:
       short-id: "f71dda44e6f4f3b7"
     client-fingerprint: chrome
 
-# ===== 策略组 =====
+# ===== 手机优化策略组 =====
 proxy-groups:
-  - name: "🚀 美国节点"
+  - name: "🚀 节点选择"
     type: select
     proxies:
       - "🇺🇸 美国-Hysteria2"
       - "🇺🇸 美国-VLESS"
-
-  - name: "🚀 自动选择"
-    type: url-test
-    url: "http://www.gstatic.com/generate_204"
-    interval: 300
-    proxies:
-      - "🇺🇸 美国-Hysteria2"
-      - "🇺🇸 美国-VLESS"
-
-  - name: "🔰 流量分流"
-    type: select
-    proxies:
-      - "🚀 自动选择"
-      - "🚀 美国节点"
       - DIRECT
 
-# ===== DNS 防泄露核心配置 =====
+  - name: "🌍 国外网站"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+
+  - name: "🇨🇳 国内直连"
+    type: select
+    proxies:
+      - DIRECT
+
+  - name: "🚫 广告拦截"
+    type: select
+    proxies:
+      - REJECT
+
+# ===== DNS 防泄露配置 =====
 dns:
   enable: true
   listen: 0.0.0.0:53
-  enhanced-mode: redir-host   # 手机端兼容性更好
+  enhanced-mode: redir-host  # 手机兼容模式
   nameserver:
-    - https://1.1.1.1/dns-query  # Cloudflare DoH
+    - https://1.1.1.1/dns-query # Cloudflare
   fallback:
-    - tls://8.8.4.4:853  # Google DoT (fallback)
+    - https://8.8.8.8/dns-query # Google
   fallback-filter:
     geoip: true
     geoip-code: CN
 
-# ===== 优化规则分流 =====
-rules:
-  # 国内直连
-  - GEOIP,CN,DIRECT
-  # 国外走代理
-  - MATCH,"🔰 流量分流"
-    
-# ===== 手机端特殊设置 =====
-interface-name: "wlan*"      # 匹配手机WiFi
+# ===== 手机专属优化 =====
 tun:
   enable: true
   stack: system
-  dns-hijack:
-    - 0.0.0.0:53
+  dns-hijack: 
+    - any:53
   auto-route: true
-  auto-detect-interface: true # 自动选择网络接口
+  auto-detect-interface: true  # 自动识别网络
+
+# ===== 规则分流 (手机精简版) =====
+rules:
+  # 直连规则
+  - DOMAIN-SUFFIX,cn,DIRECT
+  - GEOIP,CN,🇨🇳 国内直连
+  - DOMAIN-KEYWORD,baidu,🇨🇳 国内直连
+  - DOMAIN-SUFFIX,weibo.com,🇨🇳 国内直连
   
-# ===== 强制DNS安全 =====
+  # 代理规则
+  - DOMAIN-SUFFIX,google.com,🌍 国外网站
+  - DOMAIN-SUFFIX,twitter.com,🌍 国外网站
+  - DOMAIN-SUFFIX,facebook.com,🌍 国外网站
+  
+  # 广告拦截
+  - DOMAIN-SUFFIX,ad.com,🚫 广告拦截
+  - DOMAIN-KEYWORD,ads,🚫 广告拦截
+  
+  # 最终规则
+  - MATCH,🚀 节点选择  # 其他全部走代理
+
+# ===== 强制 DNS 代理 ====
 script:
   shortcuts:
     force_dns: |
       rules:
-        - DST-PORT,53,🔰 流量分流
-        - DST-PORT,853,🔰 流量分流
+        - DST-PORT,53,🚀 节点选择
+        - DST-PORT,853,🚀 节点选择
