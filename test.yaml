@@ -1,24 +1,75 @@
-# Clash Meta 简化测试配置
-# 用于测试基础功能是否正常
-
+# Clash Meta 完整配置 - 严格防 DNS 泄露版本
+# ============================================
+# 基础配置
+# ============================================
 mixed-port: 7890
 allow-lan: true
+bind-address: '*'
 mode: rule
 log-level: info
+external-controller: 127.0.0.1:9090
+ipv6: true
 
-# 简化的 DNS 配置
+# ============================================
+# DNS 配置 - 严格防止 DNS 泄露
+# ============================================
 dns:
   enable: true
   listen: 0.0.0.0:53
+  ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  nameserver:
+  fake-ip-filter:
+    - '*.lan'
+    - '*.local'
+    - 'localhost.ptlogin2.qq.com'
+    - '+.srv.nintendo.net'
+    - '+.stun.playstation.net'
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+    - '+.xboxlive.com'
+    - 'msftconnecttest.com'
+    - 'xbox.*.microsoft.com'
+    - '*.battlenet.com.cn'
+    - '*.battlenet.com'
+    - '*.blzstatic.cn'
+    - '*.battle.net'
+  
+  # 使用国外 DNS IP 地址（不使用域名）
+  default-nameserver:
     - 1.1.1.1
+    - 1.0.0.1
     - 8.8.8.8
+    - 8.8.4.4
+  
+  # 主 DNS - 只使用国外 DNS
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://1.0.0.1/dns-query
+    - https://8.8.8.8/dns-query
+    - https://8.8.4.4/dns-query
+  
+  # 后备 DNS - 确保都是国外 DNS
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://1.0.0.1/dns-query
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+  
+  # 后备过滤器
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+      - 0.0.0.0/32
+      - 127.0.0.1/32
 
-# 只保留一个节点测试
+# ============================================
+# 代理节点
+# ============================================
 proxies:
-  - name: "测试节点-HY2"
+  - name: "美国-Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
@@ -28,15 +79,104 @@ proxies:
     sni: ipv6.zxh425.dpdns.org
     skip-cert-verify: false
 
-# 最简单的代理组
+  - name: "美国-VLESS"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    skip-cert-verify: false
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
+# ============================================
+# 代理组
+# ============================================
 proxy-groups:
   - name: PROXY
     type: select
     proxies:
-      - 测试节点-HY2
+      - 美国-Hysteria2
+      - 美国-VLESS
+      - 自动选择
       - DIRECT
 
-# 最简单的规则
+  - name: 自动选择
+    type: url-test
+    proxies:
+      - 美国-Hysteria2
+      - 美国-VLESS
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+
+  - name: Streaming
+    type: select
+    proxies:
+      - PROXY
+      - 美国-Hysteria2
+      - 美国-VLESS
+      - 自动选择
+
+  - name: Final
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+# ============================================
+# 分流规则
+# ============================================
 rules:
+  # 本地网络直连
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,17.0.0.0/8,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT
+  
+  # 流媒体
+  - DOMAIN-SUFFIX,youtube.com,Streaming
+  - DOMAIN-SUFFIX,googlevideo.com,Streaming
+  - DOMAIN-SUFFIX,netflix.com,Streaming
+  - DOMAIN-SUFFIX,nflxvideo.net,Streaming
+  - DOMAIN-SUFFIX,twitch.tv,Streaming
+  - DOMAIN-SUFFIX,hulu.com,Streaming
+  
+  # Google 服务
+  - DOMAIN-SUFFIX,google.com,PROXY
+  - DOMAIN-SUFFIX,googleapis.com,PROXY
+  - DOMAIN-SUFFIX,googleusercontent.com,PROXY
+  - DOMAIN-SUFFIX,gstatic.com,PROXY
+  
+  # 常见国际服务
+  - DOMAIN-SUFFIX,github.com,PROXY
+  - DOMAIN-SUFFIX,githubusercontent.com,PROXY
+  - DOMAIN-SUFFIX,twitter.com,PROXY
+  - DOMAIN-SUFFIX,x.com,PROXY
+  - DOMAIN-SUFFIX,facebook.com,PROXY
+  - DOMAIN-SUFFIX,instagram.com,PROXY
+  - DOMAIN-SUFFIX,telegram.org,PROXY
+  - DOMAIN-SUFFIX,t.me,PROXY
+  
+  # 国内网站直连
+  - DOMAIN-SUFFIX,cn,DIRECT
+  - DOMAIN-KEYWORD,baidu,DIRECT
+  - DOMAIN-KEYWORD,alipay,DIRECT
+  - DOMAIN-KEYWORD,taobao,DIRECT
+  - DOMAIN-KEYWORD,qq,DIRECT
+  - DOMAIN-KEYWORD,wechat,DIRECT
+  - DOMAIN-KEYWORD,weixin,DIRECT
+  
+  # GeoIP 中国直连
   - GEOIP,CN,DIRECT
-  - MATCH,PROXY
+  
+  # 兜底规则
+  - MATCH,Final
