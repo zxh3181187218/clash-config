@@ -86,7 +86,7 @@ proxies:
   # 美国 Hysteria2 节点
   - name: "美国-Hysteria2"
     type: hysteria2
-    server: ipv6.zxh425.dpdns.org
+    server: hy2.zxh425.dpdns.org
     port: 443
     password: 3n5T8b9NhTZe5cm2NW
     obfs: salamander
@@ -112,7 +112,7 @@ proxies:
   # 美国 VLESS 节点
   - name: "美国-VLESS"
     type: vless
-    server: ipv6.zxh425.dpdns.org
+    server: hy2.zxh425.dpdns.org
     port: 443
     uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     network: tcp
