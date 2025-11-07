@@ -1,117 +1,114 @@
-# Clash.Meta 配置文件
-# 由 Gemini 转换生成 (v3 - 已添加防 DNS 泄露的 Fake-IP 模式)
+# ===== 基础设置 =====
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: rule
+log-level: info
+external-controller: 127.0.0.1:9090
+secret: "your_password"  # 建议修改为自定义密码
 
-# ----------------
-# 代理节点 (Proxies)
-# ----------------
+# ===== 代理节点配置 =====
 proxies:
-  - name: hy2
+  # Hysteria2 节点 (带混淆)
+  - name: "🇺🇸 美国-Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
-    password: 3n5T8b9NhTZe5cm2NW
-    sni: ipv6.zxh425.dpdns.org
-    skip-cert-verify: false
-    obfs: salamander
-    obfs-password: 96Jj12oLbwuEQOrZ39
+    password: "3n5T8b9NhTZe5cm2NW"
+    obfs:
+      type: salamander
+      password: "96Jj12oLbwuEQOrZ39"
+    sni: "ipv6.zxh425.dpdns.org"
+    skip-cert-verify: false  # 保持证书验证
 
-  - name: vless
+  # VLESS Reality 节点
+  - name: "🇺🇸 美国-VLESS"
     type: vless
     server: ipv6.zxh425.dpdns.org
     port: 443
-    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    uuid: "3a7d914d-86d9-4cec-8e65-b08f5c0b98ab"
     network: tcp
     tls: true
-    flow: xtls-rprx-vision
-    client-fingerprint: chrome
-    servername: gateway.icloud.com
+    udp: true
+    flow: "xtls-rprx-vision"
+    servername: "gateway.icloud.com"  # Reality 的伪装域名
     reality-opts:
-      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
-      short-id: f71dda44e6f4f3b7
+      public-key: "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4"
+      short-id: "f71dda44e6f4f3b7"
+    client-fingerprint: chrome
 
-# ----------------
-# 代理组 (Proxy Groups)
-# ----------------
+# ===== 策略组 =====
 proxy-groups:
-  - name: "自动选择"
-    type: url-test
-    proxies:
-      - hy2
-      - vless
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-
-  - name: "代理策略"
+  - name: "🚀 美国节点"
     type: select
     proxies:
-      - "自动选择"
-      - hy2
-      - vless
+      - "🇺🇸 美国-Hysteria2"
+      - "🇺🇸 美国-VLESS"
       - DIRECT
 
-# ----------------
-# DNS 配置 (核心)
-# ----------------
+  - name: "🚀 自动选择"
+    type: url-test
+    url: "http://www.gstatic.com/generate_204"
+    interval: 300
+    proxies:
+      - "🇺🇸 美国-Hysteria2"
+      - "🇺🇸 美国-VLESS"
+
+  - name: "🔰 流量分流"
+    type: select
+    proxies:
+      - "🚀 美国节点"
+      - "🚀 自动选择"
+      - DIRECT
+
+# ===== DNS 防泄露核心配置 =====
 dns:
   enable: true
-  listen: 127.0.0.1:7853 # 监听一个本地端口，避免 53 端口冲突
-  enhanced-mode: fake-ip  # 开启 Fake-IP 模式
-  fake-ip-range: 198.18.0.0/15 # Fake-IP 的地址池
-
-  # [国外 DNS] - 用于解析非国内域名
-  # 这些 DNS 查询将通过代理（见下方的 nameserver-policy）
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip   # 最高安全级别
+  fake-ip-range: 198.18.0.1/16
   nameserver:
-    - tls://1.1.1.1 # Cloudflare (DoT)
-    - tls://8.8.8.8 # Google (DoT)
-
-  # [国内 DNS] - 作为 fallback，用于解析国内域名
+    - https://1.1.1.1/dns-query  # Cloudflare DoH
+    - https://dns.google/dns-query  # Google DoH
   fallback:
-    - https://223.5.5.5/dns-query # 阿里 DoH
-    - https://119.29.29.29/dns-query # 腾讯 DoH
-    - 223.6.6.6 # 阿里备用 UDP
-
-  # [代理服务器 DNS] - 专门用于解析你 proxies 列表中的服务器域名
-  # 必须是一个可靠、可直连的 DNS，以防启动循环
-  proxy-server-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-
-  # [策略] - 让 fallback 规则 (国内) 生效
+    - tls://8.8.4.4:853  # Google DoT
+    - https://doh.opendns.com/dns-query  # OpenDNS
   fallback-filter:
-    geosite: [cn]
-    ip-cidr: [223.5.5.5/32, 119.29.29.29/32] # 确保国内 DNS 本身也直连
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
 
-  # [策略] - 强制[国外 DNS]的查询走[代理策略]
-  # 这是防止 DNS 泄露的最后一道保险
-  nameserver-policy:
-    'tls://1.1.1.1': "代理策略"
-    'tls://8.8.8.8': "代理策略"
-
-# ----------------
-# 规则 (Rules)
-# ----------------
+# ===== 规则分流 =====
 rules:
-  # 1. [重要] Fake-IP 模式需要排除其地址池
-  - IP-CIDR, 198.18.0.0/15, DIRECT
+  - RULE-SET,reject,REJECT  # 广告拦截
+  - GEOIP,CN,DIRECT  # 国内直连
+  - MATCH,"🔰 流量分流"  # 其他流量走美国节点
 
-  # 2. 局域网和私有地址直连
-  - IP-CIDR, 10.0.0.0/8, DIRECT
-  - IP-CIDR, 100.64.0.0/10, DIRECT
-  - IP-CIDR, 127.0.0.0/8, DIRECT
-  - IP-CIDR, 172.16.0.0/12, DIRECT
-  - IP-CIDR, 192.168.0.0/16, DIRECT
-  - IP-CIDR, fc00::/7, DIRECT # IPv6 私有地址
-  - IP-CIDR, fe80::/10, DIRECT # IPv6 链路本地
+# ===== TUN 模式全局保护 =====
+tun:
+  enable: true
+  stack: system
+  dns-hijack:
+    - any:53  # 劫持所有 DNS 请求
+  auto-route: true
+  auto-redir: true
 
-  # 3. [重要] 直连代理服务器域名，防止循环
-  - DOMAIN, ipv6.zxh425.dpdns.org, DIRECT
+# ===== 规则集自动更新 =====
+rule-providers:
+  reject:  # 广告规则
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    interval: 86400
 
-  # 4. 国内常见域名直连 (基于 GeoSite)
-  - GEOSITE, cn, DIRECT
-
-  # 5. 国内 IP 地址直连 (基于 GeoIP)
-  - GEOIP, cn, DIRECT
-
-  # 6. 其他所有流量 (国外流量)
-  #    - 走您在 "代理策略" 组中选择的策略
-  - MATCH, 代理策略
+# ===== 强制代理 DNS 请求 =====
+script:
+  engine: expr # 启用表达式引擎
+  code: |
+    function main(ctx) {
+      const dns_ports = [53, 853, 443]; 
+      if(dns_ports.includes(ctx.dst_port)) {
+        return { action: 'force_remote' };  # 强制所有 DNS 请求走代理
+      }
+    }
