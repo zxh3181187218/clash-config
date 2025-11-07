@@ -1,72 +1,76 @@
-mixed-port: 7890
-allow-lan: true
-external-controller: 127.0.0.1:9090
-mode: rule
-log-level: info
+# Clash.Meta 配置文件
+# 由 Gemini 转换生成（带自动测速和国内分流）
 
+# 代理节点 (Proxies)
+# 您的两个美国节点
 proxies:
-  - name: "US-Hysteria2"
-    type: hysteria
+  - name: hy2
+    type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
-    udp: true
-    username: "3n5T8b9NhTZe5cm2NW"
-    obfs: "salamander"
-    obfs-password: "96Jj12oLbwuEQOrZ39"
-    tls: true
+    password: 3n5T8b9NhTZe5cm2NW
+    sni: ipv6.zxh425.dpdns.org
     skip-cert-verify: false
-    alpn: ["h3"]
-    up: true
+    obfs: salamander
+    obfs-password: 96Jj12oLbwuEQOrZ39
 
-  - name: "US-VLESS-Reality"
+  - name: vless
     type: vless
     server: ipv6.zxh425.dpdns.org
     port: 443
-    uuid: "3a7d914d-86d9-4cec-8e65-b08f5c0b98ab"
-    flow: "xtls-rprx-vision"
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     network: tcp
-    security: reality
     tls: true
-    skip-cert-verify: false
-    server-crypto: none
-    fingerprint: chrome
-    sni: gateway.icloud.com
-    reality:
-      pbk: "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4"
-      short-id: "f71dda44e6f4f3b7"
-      spx: ""
-      header-type: none
-    up: true
+    flow: xtls-rprx-vision
+    client-fingerprint: chrome
+    servername: gateway.icloud.com
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
 
+# 代理组 (Proxy Groups)
 proxy-groups:
-  - name: "US-Proxy-Auto"
+  # 1. 自动选择组 (url-test)
+  #    - 自动测试 "hy2" 和 "vless" 节点，并选择延迟最低的节点。
+  - name: "自动选择"
     type: url-test
     proxies:
-      - US-Hysteria2
-      - US-VLESS-Reality
-    url: "http://www.gstatic.com/generate_204"
-    interval: 300
-    tolerance: 50
+      - hy2
+      - vless
+    url: http://www.gstatic.com/generate_204
+    interval: 300 # 每 300 秒（5分钟）测试一次
 
-dns:
-  enable: true
-  listen: 0.0.0.0:1053
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
-  fallback:
-    - 1.1.1.1
-    - 8.8.8.8
+  # 2. 策略选择组 (select)
+  #    - 这是您的主要切换开关。
+  #    - "自动选择": 使用上面 url-test 组选出的最快节点。
+  #    - 您也可以手动锁定 "hy2" 或 "vless"。
+  - name: "代理策略"
+    type: select
+    proxies:
+      - "自动选择" # 默认使用自动选择
+      - hy2
+      - vless
+      - DIRECT # 也可以手动选择直连
 
+# 规则 (Rules)
+# 基于 GEOSITE 和 GEOIP 的国内分流规则
 rules:
-  - DOMAIN-SUFFIX,cn,DIRECT
-  - DOMAIN-SUFFIX,com.cn,DIRECT
-  - DOMAIN-SUFFIX,gov.cn,DIRECT
-  - DOMAIN-SUFFIX,edu.cn,DIRECT
-  - IP-CIDR,10.0.0.0/8,DIRECT
-  - IP-CIDR,172.16.0.0/12,DIRECT
-  - IP-CIDR,192.168.0.0/16,DIRECT
-  - GEOIP,CN,DIRECT
-  - MATCH,US-Proxy-Auto
+  # 1. 局域网和私有地址直连
+  - IP-CIDR, 10.0.0.0/8, DIRECT
+  - IP-CIDR, 100.64.0.0/10, DIRECT
+  - IP-CIDR, 127.0.0.0/8, DIRECT
+  - IP-CIDR, 172.16.0.0/12, DIRECT
+  - IP-CIDR, 192.168.0.0/16, DIRECT
+  - IP-CIDR, 198.18.0.0/16, DIRECT
+  - IP-CIDR, fc00::/7, DIRECT # IPv6 私有地址
+  - IP-CIDR, fe80::/10, DIRECT # IPv6 链路本地
+
+  # 2. 国内常见域名直连 (基于 GeoSite)
+  - GEOSITE, cn, DIRECT
+
+  # 3. 国内 IP 地址直连 (基于 GeoIP)
+  - GEOIP, cn, DIRECT
+
+  # 4. 其他所有流量 (国外流量)
+  #    - 走您在 "代理策略" 组中选择的策略
+  - MATCH, 代理策略
