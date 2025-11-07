@@ -1,4 +1,4 @@
-# ================= Clash Meta 配置 =================
+# ================= Clash Meta 配 =================
 mixed-port: 7890
 allow-lan: true
 external-controller: 127.0.0.1:9090
