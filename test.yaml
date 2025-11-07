@@ -5,7 +5,7 @@ external-controller: 127.0.0.1:9090
 mode: rule
 log-level: info
 
-# ================ 节点配置 =================
+# ================= 节点配置 =================
 proxies:
   - name: "US-Hysteria2"
     type: hysteria
@@ -39,7 +39,7 @@ proxies:
       spx: ""
       header-type: none
 
-# ================ 负载均衡组 =================
+# ================= 负载均衡组 =================
 proxy-groups:
   - name: "US-Proxy-Auto"
     type: url-test
@@ -65,7 +65,7 @@ dns:
 
 # ================= 规则 =================
 rules:
-  # 国内直连规则
+  # 国内直连
   - DOMAIN-SUFFIX,cn,DIRECT
   - DOMAIN-SUFFIX,com.cn,DIRECT
   - DOMAIN-SUFFIX,gov.cn,DIRECT
