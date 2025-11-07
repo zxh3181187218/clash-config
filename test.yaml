@@ -1,38 +1,15 @@
-# Clash Meta 配置文件
-# 防止 DNS 泄露的完整配置
-
-# 混合端口配置
 mixed-port: 7890
-# HTTP(S) 代理端口
-# port: 7890
-# SOCKS5 代理端口
-# socks-port: 7891
-
-# 允许局域网连接
 allow-lan: true
-# 绑定 IP 地址
 bind-address: '*'
-
-# Clash 运行模式
 mode: rule
-
-# 日志级别
 log-level: info
-
-# 外部控制器
 external-controller: 127.0.0.1:9090
-
-# DNS 配置 - 防止 DNS 泄露的关键配置
 dns:
   enable: true
-  # 优先使用 DoH/DoT
   prefer-h3: true
-  # 监听端口
   listen: 0.0.0.0:53
-  # 使用系统 hosts
   use-hosts: true
-  # IPv6 支持
-  ipv6: true
+  ipv6: false
   # 增强模式：fake-ip 模式可以有效防止 DNS 泄露
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
@@ -84,14 +61,14 @@ proxies:
   # Hysteria2 节点
   - name: "美国-Hysteria2"
     type: hysteria2
-    server: ipv6.zxh425.dpdns.org
+    server: hy2.zxh425.dpdns.org
     port: 443
     password: 3n5T8b9NhTZe5cm2NW
     # obfs 配置
     obfs: salamander
     obfs-password: 96Jj12oLbwuEQOrZ39
     # TLS 配置
-    sni: ipv6.zxh425.dpdns.org
+    sni: hy2.zxh425.dpdns.org
     skip-cert-verify: false
     # 可选：上传/下载带宽（Mbps）
     # up: 50
@@ -100,7 +77,7 @@ proxies:
   # VLESS Reality 节点
   - name: "美国-VLESS"
     type: vless
-    server: ipv6.zxh425.dpdns.org
+    server: hy2.zxh425.dpdns.org
     port: 443
     uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     network: tcp
