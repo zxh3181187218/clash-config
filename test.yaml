@@ -1,4 +1,4 @@
-# Clash Meta 完整配置 - 严格防 DNS 泄露版本
+# Clash Meta 完整配置 - 解决 DNS 被墙问题
 # ============================================
 # 基础配置
 # ============================================
@@ -6,12 +6,12 @@ mixed-port: 7890
 allow-lan: true
 bind-address: '*'
 mode: rule
-log-level: debug
+log-level: info
 external-controller: 127.0.0.1:9090
 ipv6: true
 
 # ============================================
-# DNS 配置 - 严格防止 DNS 泄露
+# DNS 配置 - 关键修改
 # ============================================
 dns:
   enable: true
@@ -19,42 +19,73 @@ dns:
   ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  # fake-ip-filter 改为最小化，只保留必要的
   fake-ip-filter:
     - '*.lan'
     - 'localhost.ptlogin2.qq.com'
     - '+.msftconnecttest.com'
     - '+.msftncsi.com'
   
-  # 使用国外 DNS IP 地址（不使用域名）
+  # ⚠️ 关键1: 使用国内 DNS 解析代理服务器域名
+  # 因为代理服务器必须能直连，所以用国内 DNS 解析
   default-nameserver:
-    - 1.1.1.1
-    - 1.0.0.1
-    - 8.8.8.8
-    - 8.8.4.4
+    - 223.5.5.5
+    - 119.29.29.29
   
-  # 主 DNS - 只使用国外 DNS
+  # ⚠️ 关键2: 代理服务器域名专用 DNS（直连查询）
+  # 只有你的代理服务器域名用国内 DNS 直连查询
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+    - 114.114.114.114
+  
+  # ⚠️ 关键3: 所有其他域名的 DNS 查询都走代理
+  # 使用 nameserver-policy 让 DoH 查询走代理
   nameserver:
-    - https://1.1.1.1/dns-query
-    - https://1.0.0.1/dns-query
-    - https://8.8.8.8/dns-query
-    - https://8.8.4.4/dns-query
+    # 使用国内可访问的 DoH（作为备用）
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    # 国外 DoH 会通过 fallback 和 nameserver-policy 走代理
   
-  # 后备 DNS - 确保都是国外 DNS
+  # ⚠️ 关键4: 指定 DoH 服务器走代理
+  # 格式: 'geosite:category-name': PROXY组名
+  nameserver-policy:
+    # 指定代理服务器域名直连
+    'ipv6.zxh425.dpdns.org': 
+      - 223.5.5.5
+      - 119.29.29.29
+    'dpdns.org':
+      - 223.5.5.5
+      - 119.29.29.29
+    # Reality 伪装目标直连
+    'gateway.icloud.com':
+      - 223.5.5.5
+      - 119.29.29.29
+    'icloud.com':
+      - 223.5.5.5
+      - 119.29.29.29
+    # Google/Cloudflare DNS 域名走代理查询
+    'dns.google':
+      - 'https://doh.pub/dns-query'
+    'cloudflare-dns.com':
+      - 'https://doh.pub/dns-query'
+    '1.1.1.1':
+      - 'https://doh.pub/dns-query'
+    '8.8.8.8':
+      - 'https://doh.pub/dns-query'
+  
+  # ⚠️ 关键5: fallback DNS 使用国外 DoH（会自动走代理）
   fallback:
     - https://1.1.1.1/dns-query
-    - https://1.0.0.1/dns-query
+    - https://8.8.8.8/dns-query
     - https://dns.google/dns-query
-    - https://cloudflare-dns.com/dns-query
   
-  # 后备过滤器
+  # 回退过滤器
   fallback-filter:
     geoip: true
     geoip-code: CN
     ipcidr:
       - 240.0.0.0/4
       - 0.0.0.0/32
-      - 127.0.0.1/32
 
 # ============================================
 # 代理节点
@@ -112,7 +143,6 @@ proxy-groups:
       - PROXY
       - 美国-Hysteria2
       - 美国-VLESS
-      - 自动选择
 
   - name: Final
     type: select
@@ -130,8 +160,6 @@ rules:
   - IP-CIDR,172.16.0.0/12,DIRECT
   - IP-CIDR,192.168.0.0/16,DIRECT
   - IP-CIDR,10.0.0.0/8,DIRECT
-  - IP-CIDR,17.0.0.0/8,DIRECT
-  - IP-CIDR,100.64.0.0/10,DIRECT
   
   # 流媒体
   - DOMAIN-SUFFIX,youtube.com,Streaming
@@ -139,13 +167,13 @@ rules:
   - DOMAIN-SUFFIX,netflix.com,Streaming
   - DOMAIN-SUFFIX,nflxvideo.net,Streaming
   - DOMAIN-SUFFIX,twitch.tv,Streaming
-  - DOMAIN-SUFFIX,hulu.com,Streaming
   
   # Google 服务
   - DOMAIN-SUFFIX,google.com,PROXY
   - DOMAIN-SUFFIX,googleapis.com,PROXY
   - DOMAIN-SUFFIX,googleusercontent.com,PROXY
   - DOMAIN-SUFFIX,gstatic.com,PROXY
+  - DOMAIN-SUFFIX,ytimg.com,PROXY
   
   # 常见国际服务
   - DOMAIN-SUFFIX,github.com,PROXY
@@ -155,7 +183,6 @@ rules:
   - DOMAIN-SUFFIX,facebook.com,PROXY
   - DOMAIN-SUFFIX,instagram.com,PROXY
   - DOMAIN-SUFFIX,telegram.org,PROXY
-  - DOMAIN-SUFFIX,t.me,PROXY
   
   # 国内网站直连
   - DOMAIN-SUFFIX,cn,DIRECT
@@ -163,8 +190,6 @@ rules:
   - DOMAIN-KEYWORD,alipay,DIRECT
   - DOMAIN-KEYWORD,taobao,DIRECT
   - DOMAIN-KEYWORD,qq,DIRECT
-  - DOMAIN-KEYWORD,wechat,DIRECT
-  - DOMAIN-KEYWORD,weixin,DIRECT
   
   # GeoIP 中国直连
   - GEOIP,CN,DIRECT
