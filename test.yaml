@@ -1,8 +1,9 @@
 # Clash.Meta 配置文件
-# 由 Gemini 转换生成（带自动测速和国内分流）
+# 由 Gemini 转换生成 (v3 - 已添加防 DNS 泄露的 Fake-IP 模式)
 
+# ----------------
 # 代理节点 (Proxies)
-# 您的两个美国节点
+# ----------------
 proxies:
   - name: hy2
     type: hysteria2
@@ -28,49 +29,89 @@ proxies:
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
       short-id: f71dda44e6f4f3b7
 
+# ----------------
 # 代理组 (Proxy Groups)
+# ----------------
 proxy-groups:
-  # 1. 自动选择组 (url-test)
-  #    - 自动测试 "hy2" 和 "vless" 节点，并选择延迟最低的节点。
   - name: "自动选择"
     type: url-test
     proxies:
       - hy2
       - vless
     url: http://www.gstatic.com/generate_204
-    interval: 300 # 每 300 秒（5分钟）测试一次
+    interval: 300
 
-  # 2. 策略选择组 (select)
-  #    - 这是您的主要切换开关。
-  #    - "自动选择": 使用上面 url-test 组选出的最快节点。
-  #    - 您也可以手动锁定 "hy2" 或 "vless"。
   - name: "代理策略"
     type: select
     proxies:
-      - "自动选择" # 默认使用自动选择
+      - "自动选择"
       - hy2
       - vless
-      - DIRECT # 也可以手动选择直连
+      - DIRECT
 
+# ----------------
+# DNS 配置 (核心)
+# ----------------
+dns:
+  enable: true
+  listen: 127.0.0.1:7853 # 监听一个本地端口，避免 53 端口冲突
+  enhanced-mode: fake-ip  # 开启 Fake-IP 模式
+  fake-ip-range: 198.18.0.0/15 # Fake-IP 的地址池
+
+  # [国外 DNS] - 用于解析非国内域名
+  # 这些 DNS 查询将通过代理（见下方的 nameserver-policy）
+  nameserver:
+    - tls://1.1.1.1 # Cloudflare (DoT)
+    - tls://8.8.8.8 # Google (DoT)
+
+  # [国内 DNS] - 作为 fallback，用于解析国内域名
+  fallback:
+    - https://223.5.5.5/dns-query # 阿里 DoH
+    - https://119.29.29.29/dns-query # 腾讯 DoH
+    - 223.6.6.6 # 阿里备用 UDP
+
+  # [代理服务器 DNS] - 专门用于解析你 proxies 列表中的服务器域名
+  # 必须是一个可靠、可直连的 DNS，以防启动循环
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+  # [策略] - 让 fallback 规则 (国内) 生效
+  fallback-filter:
+    geosite: [cn]
+    ip-cidr: [223.5.5.5/32, 119.29.29.29/32] # 确保国内 DNS 本身也直连
+
+  # [策略] - 强制[国外 DNS]的查询走[代理策略]
+  # 这是防止 DNS 泄露的最后一道保险
+  nameserver-policy:
+    'tls://1.1.1.1': "代理策略"
+    'tls://8.8.8.8': "代理策略"
+
+# ----------------
 # 规则 (Rules)
-# 基于 GEOSITE 和 GEOIP 的国内分流规则
+# ----------------
 rules:
-  # 1. 局域网和私有地址直连
+  # 1. [重要] Fake-IP 模式需要排除其地址池
+  - IP-CIDR, 198.18.0.0/15, DIRECT
+
+  # 2. 局域网和私有地址直连
   - IP-CIDR, 10.0.0.0/8, DIRECT
   - IP-CIDR, 100.64.0.0/10, DIRECT
   - IP-CIDR, 127.0.0.0/8, DIRECT
   - IP-CIDR, 172.16.0.0/12, DIRECT
   - IP-CIDR, 192.168.0.0/16, DIRECT
-  - IP-CIDR, 198.18.0.0/16, DIRECT
   - IP-CIDR, fc00::/7, DIRECT # IPv6 私有地址
   - IP-CIDR, fe80::/10, DIRECT # IPv6 链路本地
 
-  # 2. 国内常见域名直连 (基于 GeoSite)
+  # 3. [重要] 直连代理服务器域名，防止循环
+  - DOMAIN, ipv6.zxh425.dpdns.org, DIRECT
+
+  # 4. 国内常见域名直连 (基于 GeoSite)
   - GEOSITE, cn, DIRECT
 
-  # 3. 国内 IP 地址直连 (基于 GeoIP)
+  # 5. 国内 IP 地址直连 (基于 GeoIP)
   - GEOIP, cn, DIRECT
 
-  # 4. 其他所有流量 (国外流量)
+  # 6. 其他所有流量 (国外流量)
   #    - 走您在 "代理策略" 组中选择的策略
   - MATCH, 代理策略
