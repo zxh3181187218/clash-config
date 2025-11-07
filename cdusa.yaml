@@ -1,0 +1,135 @@
+# Clash Meta config generated for user (USA x2, Chengdu x1)
+# Import into Clash Meta (Android). After import: Settings → System VPN + Fake-IP + Hijack Local DNS.
+
+port: 7890
+socks-port: 7891
+redir-port: 7892
+allow-lan: false
+mode: Rule
+log-level: info
+external-controller: 127.0.0.1:9090
+
+proxies:
+  - name: "US-hysteria"
+    type: hysteria
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: "3n5T8b9NhTZe5cm2NW"
+    udp: true
+    obfs:
+      type: "salamander"
+      password: "96Jj12oLbwuEQOrZ39"
+    tls: true
+    sni: "ipv6.zxh425.dpdns.org"
+    skip-cert-verify: false
+
+  - name: "US-vmess"
+    type: vmess
+    server: 47.108.130.60
+    port: 51691
+    uuid: "51329a89-76f0-42e2-f7d9-d660147e4b15"
+    alterId: 0
+    cipher: auto
+    tls: false
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: "pull.free.video.10010.com"
+
+  - name: "CD-vless-reality"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: "3a7d914d-86d9-4cec-8e65-b08f5c0b98ab"
+    flow: xtls-rprx-vision
+    tls: true
+    skip-cert-verify: false
+    sni: "gateway.icloud.com"
+    fingerprint: "chrome"
+    reality:
+      public-key: "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4"
+      short-id: "f71dda44e6f4f3b7"
+      server-name: "gateway.icloud.com"
+
+proxy-groups:
+  - name: "US-Group"
+    type: select
+    proxies:
+      - "US-hysteria"
+      - "US-vmess"
+
+  - name: "China-CD"
+    type: select
+    proxies:
+      - "CD-vless-reality"
+
+  - name: "GLOBAL"
+    type: url-test
+    url: "http://www.gstatic.com/generate_204"
+    interval: 300
+    proxies:
+      - "US-hysteria"
+      - "US-vmess"
+      - "CD-vless-reality"
+
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.local"
+    - "localhost"
+  nameserver:
+    - "https://1.1.1.1/dns-query"
+    - "https://dns.google/dns-query"
+  fallback:
+    - "https://1.1.1.1/dns-query"
+    - "tls://8.8.4.4:853"
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - "0.0.0.0/0"
+
+tun:
+  enable: true
+  stack: system
+  dns-hijack:
+    - "198.18.0.1:53"
+  auto-route: true
+  auto-detect-interface: true
+
+# Rules:
+# - GEOIP,CN => China-CD
+# - Common China domains => China-CD
+# - Private LAN ranges => send to proxy to avoid local-DNS/IP leak
+# - Final => US-Group (i.e., foreign)
+rules:
+  - GEOIP, CN, China-CD
+  - DOMAIN-SUFFIX,cn, China-CD
+  - DOMAIN-SUFFIX,com.cn, China-CD
+  - DOMAIN-SUFFIX,gov.cn, China-CD
+  - DOMAIN-SUFFIX,edu.cn, China-CD
+  - DOMAIN-KEYWORD,qq, China-CD
+  - DOMAIN-KEYWORD,taobao, China-CD
+  - DOMAIN-KEYWORD,tencent, China-CD
+  - DOMAIN-KEYWORD,alipay, China-CD
+  - DOMAIN-KEYWORD,baidu, China-CD
+  - DOMAIN-SUFFIX,local, China-CD
+
+  # Prevent direct LAN/DHCP/DNS access — force through proxy
+  - IP-CIDR,10.0.0.0/8, GLOBAL
+  - IP-CIDR,172.16.0.0/12, GLOBAL
+  - IP-CIDR,192.168.0.0/16, GLOBAL
+  - IP-CIDR,127.0.0.0/8, GLOBAL
+  - IP-CIDR,::1/128, GLOBAL
+  - IP-CIDR,fe80::/10, GLOBAL
+
+  # Common leak test / local admin endpoints — force through proxy
+  - DOMAIN,localhost, GLOBAL
+  - DOMAIN-SUFFIX,localdomain, GLOBAL
+
+  # Final: all other traffic -> US group (foreign)
+  - MATCH, US-Group
