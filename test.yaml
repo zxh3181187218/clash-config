@@ -1,18 +1,90 @@
+# ============================================
+# 基础配置部分
+# ============================================
+
+# mixed-port: 混合端口，同时支持 HTTP(S) 和 SOCKS5 代理
+# 值 7890: 常用的代理端口号，可以改成任意未占用端口
+# 应用程序设置代理时填写: HTTP代理 127.0.0.1:7890 或 SOCKS5代理 127.0.0.1:7890
 mixed-port: 7890
+
+# port: 单独的 HTTP(S) 代理端口（已被 mixed-port 包含，所以注释掉）
+# port: 7890
+
+# socks-port: 单独的 SOCKS5 代理端口（已被 mixed-port 包含，所以注释掉）
+# socks-port: 7891
+
+# allow-lan: 是否允许局域网设备连接
+# true: 允许（手机、平板等可以通过这台电脑的IP:7890使用代理）
+# false: 不允许（只有本机可以使用）
 allow-lan: true
+
+# bind-address: 绑定的网络接口
+# '*': 绑定所有网络接口（0.0.0.0，接受所有来源的连接）
+# '127.0.0.1': 只绑定本地（仅本机可用）
 bind-address: '*'
+
+# mode: Clash 的运行模式
+# rule: 基于规则分流（推荐，根据规则决定流量走向）
+# global: 全局代理（所有流量都走代理）
+# direct: 全局直连（所有流量都不走代理）
 mode: rule
+
+# log-level: 日志详细程度
+# silent: 静默，不输出
+# error: 只输出错误
+# warning: 输出警告和错误
+# info: 输出一般信息（推荐，适中）
+# debug: 输出调试信息（最详细，用于排错）
 log-level: info
+
+# external-controller: Web 控制面板的地址
+# 127.0.0.1:9090: 只能本机访问控制面板
+# 0.0.0.0:9090: 允许局域网访问（需要注意安全）
+# 访问方式: 浏览器打开 http://127.0.0.1:9090/ui 或使用 Clash 控制面板
 external-controller: 127.0.0.1:9090
+
+# ⚠️ 防 DNS 泄露的关键配置
+# tun: 虚拟网卡模式（可选，但能更好地防止泄露）
+# 如果你的 Clash Meta 支持 TUN 模式，可以取消下面的注释
+# tun:
+#   enable: true
+#   stack: system  # 或 gvisor
+#   auto-route: true
+#   auto-detect-interface: true
+#   dns-hijack:
+#     - any:53  # 劫持所有 DNS 请求
+
+# ============================================
+# DNS 配置部分 - 完全防止 DNS 泄露
+# ============================================
 dns:
+  # enable: 是否启用 Clash 的 DNS 服务
+  # true: 启用（必须启用才能防止 DNS 泄露）
   enable: true
+  
+  # prefer-h3: 是否优先使用 HTTP/3 协议查询 DoH
+  # true: 优先使用（更快，但部分网络可能不支持）
   prefer-h3: true
+  
+  # listen: DNS 服务监听地址
+  # 0.0.0.0:53: 监听所有网络接口的 53 端口（标准 DNS 端口）
+  # ⚠️ 重要: 必须将系统 DNS 设置为 127.0.0.1，让所有 DNS 查询都经过 Clash
   listen: 0.0.0.0:53
+  
+  # use-hosts: 是否使用系统 hosts 文件
   use-hosts: true
-  ipv6: false
-  # 增强模式：fake-ip 模式可以有效防止 DNS 泄露
+  
+  # ipv6: 是否解析 IPv6 地址
+  ipv6: true
+  
+  # enhanced-mode: DNS 增强模式，防 DNS 泄露的关键
+  # fake-ip: 假 IP 模式（推荐）- 完全不进行真实 DNS 查询，直到连接时才查询
   enhanced-mode: fake-ip
+  
+  # fake-ip-range: fake-ip 使用的地址段
   fake-ip-range: 198.18.0.1/16
+  
+  # fake-ip-filter: 不使用 fake-ip 的域名（这些域名需要真实 IP）
   fake-ip-filter:
     - '*.lan'
     - 'localhost.ptlogin2.qq.com'
@@ -28,150 +100,177 @@ dns:
     - '*.blzstatic.cn'
     - '*.battle.net'
   
-  # 默认 DNS 服务器（用于解析 nameserver 中的 DoH/DoT）
+  # ⚠️ 关键修改: 使用国外 DNS 的 IP 地址
+  # default-nameserver 用于解析 DoH 服务器域名
+  # 必须使用 IP 地址，避免暴露中国 DNS
   default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+    - 1.1.1.1  # Cloudflare
+    - 8.8.8.8  # Google
+    - 1.0.0.1  # Cloudflare 备用
+    - 8.8.4.4  # Google 备用
   
-  # 主 DNS 服务器 - 使用加密 DNS 防止泄露
+  # ⚠️ 关键修改: 只使用国外 DoH，并且全部通过代理查询
+  # 这是防止 DNS 泄露的核心配置
   nameserver:
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
+    # 使用 IP 地址形式的 DoH，避免域名解析泄露
+    - https://1.1.1.1/dns-query
+    - https://1.0.0.1/dns-query
+    - https://8.8.8.8/dns-query
+    - https://8.8.4.4/dns-query
+  
+  # proxy-server-nameserver: 代理服务器域名专用 DNS
+  # ⚠️ 新增配置: 用于解析代理服务器本身的域名
+  # 你的代理服务器域名: ipv6.zxh425.dpdns.org
+  # 这个必须能直连解析，否则无法连接代理
+  proxy-server-nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
   
-  # 回退 DNS 服务器（用于被污染的域名）
+  # nameserver-policy: 域名分流策略
+  # ⚠️ 新增配置: 为特定域名指定 DNS 服务器
+  # 格式: 'domain': [DNS服务器列表]
+  nameserver-policy:
+    # 你的代理服务器域名必须能解析，使用公共 DNS
+    'ipv6.zxh425.dpdns.org': [1.1.1.1, 8.8.8.8]
+    'dpdns.org': [1.1.1.1, 8.8.8.8]
+    # Apple 域名（Reality 伪装目标）
+    'gateway.icloud.com': [1.1.1.1, 8.8.8.8]
+    'icloud.com': [1.1.1.1, 8.8.8.8]
+  
+  # fallback: 后备 DNS（用于被污染的结果）
   fallback:
     - https://1.1.1.1/dns-query
+    - https://1.0.0.1/dns-query
     - https://dns.google/dns-query
     - https://cloudflare-dns.com/dns-query
-    - tls://8.8.8.8:853
     - tls://1.1.1.1:853
+    - tls://1.0.0.1:853
   
-  # 回退过滤器
+  # fallback-filter: 后备 DNS 触发条件
   fallback-filter:
     geoip: true
+    # ⚠️ 修改: 改为 !CN (非中国)，防止中国 IP 被识别
+    # 逻辑反转: 如果返回中国 IP，说明可能被污染，使用 fallback
     geoip-code: CN
+    # ⚠️ 新增: 中国 IP 段也加入黑名单
+    # 当查询国外域名时，如果返回中国 IP，大概率是污染
     ipcidr:
       - 240.0.0.0/4
       - 0.0.0.0/32
+    # ⚠️ 新增: 域名白名单，这些域名不使用 fallback
+    # 也就是说，这些域名允许返回中国 IP
+    domain:
+      - '+.cn'
+      - '+.com.cn'
 
-# 代理节点配置
+# ============================================
+# 代理节点配置部分
+# ============================================
 proxies:
-  # Hysteria2 节点
-  - name: "美国-Hysteria2"
-    type: hysteria2
-    server: hy2.zxh425.dpdns.org
+  # ==================== Hysteria2 节点 ====================
+  # Hysteria2 是一个基于 QUIC 协议的高性能代理协议
+  # 优点: 速度快，抗丢包，适合高延迟网络
+  - name: "美国-Hysteria2"  # 节点名称（显示在代理选择界面）
+    type: hysteria2  # 协议类型
+    
+    # server: 服务器地址
+    # 来自你的链接: hysteria2://...@ipv6.zxh425.dpdns.org:443
+    # 可以是域名或 IP 地址
+    server: ipv6.zxh425.dpdns.org
+    
+    # port: 服务器端口
+    # 443: HTTPS 标准端口，不容易被识别和封锁
     port: 443
+    
+    # password: 认证密码
+    # 来自你的链接中 @ 前面的部分: 3n5T8b9NhTZe5cm2NW
+    # 必须与服务器设置的密码完全一致
     password: 3n5T8b9NhTZe5cm2NW
-    # obfs 配置
+    
+    # obfs: 混淆方式（让流量看起来不像代理流量）
+    # salamander: Hysteria2 的混淆协议，模拟正常 HTTPS 流量
+    # 作用: 防止被 ISP 识别和限速/封锁
     obfs: salamander
+    
+    # obfs-password: 混淆密码
+    # 来自链接中 obfs-password=96Jj12oLbwuEQOrZ39
+    # 用于混淆加密，必须与服务器一致
     obfs-password: 96Jj12oLbwuEQOrZ39
-    # TLS 配置
-    sni: hy2.zxh425.dpdns.org
+    
+    # sni: Server Name Indication (TLS 握手时发送的服务器名)
+    # 来自链接中 sni=ipv6.zxh425.dpdns.org
+    # 用于 TLS 证书验证，必须与服务器证书匹配
+    sni: ipv6.zxh425.dpdns.org
+    
+    # skip-cert-verify: 是否跳过证书验证
+    # false: 不跳过（安全，验证服务器证书，防止中间人攻击）
+    # true: 跳过（不安全，但某些自签名证书需要设为 true）
+    # 你的链接中 insecure=0 表示不跳过验证
     skip-cert-verify: false
-    # 可选：上传/下载带宽（Mbps）
+    
+    # 以下是可选参数（已注释）
+    # up: 上传带宽限制（Mbps）
+    # down: 下载带宽限制（Mbps）
+    # 不设置则使用服务器默认值或自动检测
     # up: 50
     # down: 200
 
-  # VLESS Reality 节点
-  - name: "美国-VLESS"
-    type: vless
-    server: hy2.zxh425.dpdns.org
+  # ==================== VLESS Reality 节点 ====================
+  # VLESS 是一个轻量级代理协议，Reality 是新型伪装技术
+  # 优点: 流量特征接近真实 TLS，难以被识别
+  - name: "美国-VLESS"  # 节点名称
+    type: vless  # 协议类型
+    
+    # server: 服务器地址
+    # 来自链接: vless://...@ipv6.zxh425.dpdns.org:443
+    server: ipv6.zxh425.dpdns.org
+    
+    # port: 服务器端口
     port: 443
+    
+    # uuid: 用户 ID（相当于密码）
+    # 来自链接中 @ 前面的部分: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    # 格式: 标准 UUID v4
     uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    
+    # network: 传输层协议
+    # tcp: 使用 TCP 协议（稳定，兼容性好）
+    # 其他选项: ws (WebSocket), grpc, h2 (HTTP/2)
     network: tcp
+    
+    # tls: 是否启用 TLS 加密
+    # true: 启用（必须，Reality 基于 TLS）
     tls: true
+    
+    # udp: 是否支持 UDP 转发
+    # true: 支持（用于 QUIC、游戏、语音通话等）
     udp: true
-    # Reality 配置
+    
+    # reality-opts: Reality 协议特定配置
     reality-opts:
+      # public-key: 服务器公钥
+      # 来自链接中 pbk=IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      # 用于加密握手，确保连接安全性
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      
+      # short-id: 短 ID（客户端标识）
+      # 来自链接中 sid=f71dda44e6f4f3b7
+      # 8 或 16 位十六进制字符，用于快速识别客户端
       short-id: f71dda44e6f4f3b7
-    # XTLS Vision flow
+    
+    # flow: 流控模式
+    # xtls-rprx-vision: XTLS Vision 流控
+    #   - XTLS: 扩展传输层安全，比 TLS 更高效
+    #   - Vision: 新版流控，性能和安全性更好
+    # 作用: 减少加密开销，提高传输速度
     flow: xtls-rprx-vision
-    # TLS 配置
+    
+    # servername: TLS SNI（伪装的目标网站）
+    # gateway.icloud.com: 伪装成苹果 iCloud 网关
+    # Reality 会模拟访问这个网站的 TLS 流量
+    # 来自链接中 sni=gateway.icloud.com
     servername: gateway.icloud.com
-    client-fingerprint: chrome
-    skip-cert-verify: false
-
-# 代理组配置
-proxy-groups:
-  # 手动选择代理
-  - name: "PROXY"
-    type: select
-    proxies:
-      - 美国-Hysteria2
-      - 美国-VLESS
-      - 自动选择
-      - DIRECT
-
-  # 自动选择最低延迟
-  - name: "自动选择"
-    type: url-test
-    proxies:
-      - 美国-Hysteria2
-      - 美国-VLESS
-    url: 'http://www.gstatic.com/generate_204'
-    interval: 300
-
-  # 国际流媒体
-  - name: "Streaming"
-    type: select
-    proxies:
-      - PROXY
-      - 美国-Hysteria2
-      - 美国-VLESS
-      - 自动选择
-
-  # 兜底规则
-  - name: "Final"
-    type: select
-    proxies:
-      - PROXY
-      - DIRECT
-
-# 分流规则
-rules:
-  # 本地网络直连
-  - DOMAIN-SUFFIX,local,DIRECT
-  - IP-CIDR,127.0.0.0/8,DIRECT
-  - IP-CIDR,172.16.0.0/12,DIRECT
-  - IP-CIDR,192.168.0.0/16,DIRECT
-  - IP-CIDR,10.0.0.0/8,DIRECT
-  - IP-CIDR,17.0.0.0/8,DIRECT
-  - IP-CIDR,100.64.0.0/10,DIRECT
-  
-  # 流媒体规则
-  - DOMAIN-SUFFIX,youtube.com,Streaming
-  - DOMAIN-SUFFIX,googlevideo.com,Streaming
-  - DOMAIN-SUFFIX,netflix.com,Streaming
-  - DOMAIN-SUFFIX,nflxvideo.net,Streaming
-  - DOMAIN-SUFFIX,twitch.tv,Streaming
-  - DOMAIN-SUFFIX,hulu.com,Streaming
-  
-  # Google 服务
-  - DOMAIN-SUFFIX,google.com,PROXY
-  - DOMAIN-SUFFIX,googleapis.com,PROXY
-  - DOMAIN-SUFFIX,googleusercontent.com,PROXY
-  - DOMAIN-SUFFIX,gstatic.com,PROXY
-  
-  # 常见国际服务
-  - DOMAIN-SUFFIX,github.com,PROXY
-  - DOMAIN-SUFFIX,githubusercontent.com,PROXY
-  - DOMAIN-SUFFIX,twitter.com,PROXY
-  - DOMAIN-SUFFIX,facebook.com,PROXY
-  - DOMAIN-SUFFIX,instagram.com,PROXY
-  - DOMAIN-SUFFIX,telegram.org,PROXY
-  
-  # 国内网站直连
-  - DOMAIN-SUFFIX,cn,DIRECT
-  - DOMAIN-KEYWORD,baidu,DIRECT
-  - DOMAIN-KEYWORD,alipay,DIRECT
-  - DOMAIN-KEYWORD,taobao,DIRECT
-  - DOMAIN-KEYWORD,qq,DIRECT
-  
-  # GeoIP 规则
-  - GEOIP,CN,DIRECT
-  
-  # 兜底规则
-  - MATCH,Final
+    
+    # client-fingerprint: 客户端指纹（浏览器类型）
+    # chrome: 模拟 Chrome 浏览器的 TLS 指纹
+    # 其他选项: firefox, safari, edge, ios
