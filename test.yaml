@@ -1,110 +1,200 @@
-port: 7890
-socks-port: 7891
-allow-lan: false
+# Clash Meta 配置文件
+# 防止 DNS 泄露的完整配置
+
+# 混合端口配置
+mixed-port: 7890
+# HTTP(S) 代理端口
+# port: 7890
+# SOCKS5 代理端口
+# socks-port: 7891
+
+# 允许局域网连接
+allow-lan: true
+# 绑定 IP 地址
+bind-address: '*'
+
+# Clash 运行模式
 mode: rule
+
+# 日志级别
 log-level: info
+
+# 外部控制器
 external-controller: 127.0.0.1:9090
-secret: "your_password"  # 请修改为您的密码
 
-# ===== 修复的代理节点 =====
-proxies:
-  # Hysteria2 节点 (兼容格式)
-  - name: "🇺🇸 美国-Hysteria2"
-    type: hysteria2
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    password: "3n5T8b9NhTZe5cm2NW"
-    obfs: salamander
-    obfs-password: "96Jj12oLbwuEQOrZ39"
-    sni: "ipv6.zxh425.dpdns.org"
-    skip-cert-verify: false
-
-  # VLESS Reality 节点
-  - name: "🇺🇸 美国-VLESS"
-    type: vless
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    uuid: "3a7d914d-86d9-4cec-8e65-b08f5c0b98ab"
-    network: tcp
-    tls: true
-    udp: true
-    flow: "xtls-rprx-vision"
-    servername: "gateway.icloud.com"
-    reality-opts:
-      public-key: "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4"
-      short-id: "f71dda44e6f4f3b7"
-    client-fingerprint: chrome
-
-# ===== 手机优化策略组 =====
-proxy-groups:
-  - name: "🚀 节点选择"
-    type: select
-    proxies:
-      - "🇺🇸 美国-Hysteria2"
-      - "🇺🇸 美国-VLESS"
-      - DIRECT
-
-  - name: "🌍 国外网站"
-    type: select
-    proxies:
-      - "🚀 节点选择"
-
-  - name: "🇨🇳 国内直连"
-    type: select
-    proxies:
-      - DIRECT
-
-  - name: "🚫 广告拦截"
-    type: select
-    proxies:
-      - REJECT
-
-# ===== DNS 防泄露配置 =====
+# DNS 配置 - 防止 DNS 泄露的关键配置
 dns:
   enable: true
+  # 优先使用 DoH/DoT
+  prefer-h3: true
+  # 监听端口
   listen: 0.0.0.0:53
-  enhanced-mode: redir-host  # 手机兼容模式
+  # 使用系统 hosts
+  use-hosts: true
+  # IPv6 支持
+  ipv6: true
+  # 增强模式：fake-ip 模式可以有效防止 DNS 泄露
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - 'localhost.ptlogin2.qq.com'
+    - '+.srv.nintendo.net'
+    - '+.stun.playstation.net'
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+    - '+.xboxlive.com'
+    - 'msftconnecttest.com'
+    - 'xbox.*.microsoft.com'
+    - '*.battlenet.com.cn'
+    - '*.battlenet.com'
+    - '*.blzstatic.cn'
+    - '*.battle.net'
+  
+  # 默认 DNS 服务器（用于解析 nameserver 中的 DoH/DoT）
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  
+  # 主 DNS 服务器 - 使用加密 DNS 防止泄露
   nameserver:
-    - https://1.1.1.1/dns-query # Cloudflare
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  
+  # 回退 DNS 服务器（用于被污染的域名）
   fallback:
-    - https://8.8.8.8/dns-query # Google
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+    - tls://8.8.8.8:853
+    - tls://1.1.1.1:853
+  
+  # 回退过滤器
   fallback-filter:
     geoip: true
     geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+      - 0.0.0.0/32
 
-# ===== 手机专属优化 =====
-tun:
-  enable: true
-  stack: system
-  dns-hijack: 
-    - any:53
-  auto-route: true
-  auto-detect-interface: true  # 自动识别网络
+# 代理节点配置
+proxies:
+  # Hysteria2 节点
+  - name: "美国-Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 3n5T8b9NhTZe5cm2NW
+    # obfs 配置
+    obfs: salamander
+    obfs-password: 96Jj12oLbwuEQOrZ39
+    # TLS 配置
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
+    # 可选：上传/下载带宽（Mbps）
+    # up: 50
+    # down: 200
 
-# ===== 规则分流 (手机精简版) =====
+  # VLESS Reality 节点
+  - name: "美国-VLESS"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    # Reality 配置
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+    # XTLS Vision flow
+    flow: xtls-rprx-vision
+    # TLS 配置
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    skip-cert-verify: false
+
+# 代理组配置
+proxy-groups:
+  # 手动选择代理
+  - name: "PROXY"
+    type: select
+    proxies:
+      - 美国-Hysteria2
+      - 美国-VLESS
+      - 自动选择
+      - DIRECT
+
+  # 自动选择最低延迟
+  - name: "自动选择"
+    type: url-test
+    proxies:
+      - 美国-Hysteria2
+      - 美国-VLESS
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+
+  # 国际流媒体
+  - name: "Streaming"
+    type: select
+    proxies:
+      - PROXY
+      - 美国-Hysteria2
+      - 美国-VLESS
+      - 自动选择
+
+  # 兜底规则
+  - name: "Final"
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+# 分流规则
 rules:
-  # 直连规则
+  # 本地网络直连
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,17.0.0.0/8,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT
+  
+  # 流媒体规则
+  - DOMAIN-SUFFIX,youtube.com,Streaming
+  - DOMAIN-SUFFIX,googlevideo.com,Streaming
+  - DOMAIN-SUFFIX,netflix.com,Streaming
+  - DOMAIN-SUFFIX,nflxvideo.net,Streaming
+  - DOMAIN-SUFFIX,twitch.tv,Streaming
+  - DOMAIN-SUFFIX,hulu.com,Streaming
+  
+  # Google 服务
+  - DOMAIN-SUFFIX,google.com,PROXY
+  - DOMAIN-SUFFIX,googleapis.com,PROXY
+  - DOMAIN-SUFFIX,googleusercontent.com,PROXY
+  - DOMAIN-SUFFIX,gstatic.com,PROXY
+  
+  # 常见国际服务
+  - DOMAIN-SUFFIX,github.com,PROXY
+  - DOMAIN-SUFFIX,githubusercontent.com,PROXY
+  - DOMAIN-SUFFIX,twitter.com,PROXY
+  - DOMAIN-SUFFIX,facebook.com,PROXY
+  - DOMAIN-SUFFIX,instagram.com,PROXY
+  - DOMAIN-SUFFIX,telegram.org,PROXY
+  
+  # 国内网站直连
   - DOMAIN-SUFFIX,cn,DIRECT
-  - GEOIP,CN,🇨🇳 国内直连
-  - DOMAIN-KEYWORD,baidu,🇨🇳 国内直连
-  - DOMAIN-SUFFIX,weibo.com,🇨🇳 国内直连
+  - DOMAIN-KEYWORD,baidu,DIRECT
+  - DOMAIN-KEYWORD,alipay,DIRECT
+  - DOMAIN-KEYWORD,taobao,DIRECT
+  - DOMAIN-KEYWORD,qq,DIRECT
   
-  # 代理规则
-  - DOMAIN-SUFFIX,google.com,🌍 国外网站
-  - DOMAIN-SUFFIX,twitter.com,🌍 国外网站
-  - DOMAIN-SUFFIX,facebook.com,🌍 国外网站
+  # GeoIP 规则
+  - GEOIP,CN,DIRECT
   
-  # 广告拦截
-  - DOMAIN-SUFFIX,ad.com,🚫 广告拦截
-  - DOMAIN-KEYWORD,ads,🚫 广告拦截
-  
-  # 最终规则
-  - MATCH,🚀 节点选择  # 其他全部走代理
-
-# ===== 强制 DNS 代理 ====
-script:
-  shortcuts:
-    force_dns: |
-      rules:
-        - DST-PORT,53,🚀 节点选择
-        - DST-PORT,853,🚀 节点选择
+  # 兜底规则
+  - MATCH,Final
