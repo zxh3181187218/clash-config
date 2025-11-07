@@ -1,11 +1,9 @@
-# ================= Clash Meta 配 =================
 mixed-port: 7890
 allow-lan: true
 external-controller: 127.0.0.1:9090
 mode: rule
 log-level: info
 
-# ================= 节点配置 =================
 proxies:
   - name: "US-Hysteria2"
     type: hysteria
@@ -13,12 +11,12 @@ proxies:
     port: 443
     udp: true
     username: "3n5T8b9NhTZe5cm2NW"
-    protocol: "udp"
     obfs: "salamander"
     obfs-password: "96Jj12oLbwuEQOrZ39"
     tls: true
     skip-cert-verify: false
     alpn: ["h3"]
+    up: true
 
   - name: "US-VLESS-Reality"
     type: vless
@@ -38,8 +36,8 @@ proxies:
       short-id: "f71dda44e6f4f3b7"
       spx: ""
       header-type: none
+    up: true
 
-# ================= 负载均衡组 =================
 proxy-groups:
   - name: "US-Proxy-Auto"
     type: url-test
@@ -50,7 +48,6 @@ proxy-groups:
     interval: 300
     tolerance: 50
 
-# ================= DNS 配置 =================
 dns:
   enable: true
   listen: 0.0.0.0:1053
@@ -63,9 +60,7 @@ dns:
     - 1.1.1.1
     - 8.8.8.8
 
-# ================= 规则 =================
 rules:
-  # 国内直连
   - DOMAIN-SUFFIX,cn,DIRECT
   - DOMAIN-SUFFIX,com.cn,DIRECT
   - DOMAIN-SUFFIX,gov.cn,DIRECT
@@ -74,6 +69,4 @@ rules:
   - IP-CIDR,172.16.0.0/12,DIRECT
   - IP-CIDR,192.168.0.0/16,DIRECT
   - GEOIP,CN,DIRECT
-
-  # 国外流量走负载均衡组
   - MATCH,US-Proxy-Auto
