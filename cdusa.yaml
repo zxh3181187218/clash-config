@@ -1,4 +1,4 @@
-# Clash Meta 配置文件
+# Clash Meta 配置文
 # 包含智能分流和 DNS 防泄露
 
 # 混合端口,用于 HTTP 和 SOCKS5 代理
@@ -22,12 +22,19 @@ external-controller: '127.0.0.1:9090'
 # DNS 配置 - 防止 DNS 泄露
 dns:
   enable: true
+  ipv6: false
   listen: 0.0.0.0:53
   # 使用 fake-ip 模式,防止 DNS 泄露
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
     - '*.lan'
+    - '*.localdomain'
+    - '*.example'
+    - '*.invalid'
+    - '*.localhost'
+    - '*.test'
+    - '*.local'
     - 'localhost.ptlogin2.qq.com'
     - '+.srv.nintendo.net'
     - '+.stun.playstation.net'
@@ -41,27 +48,38 @@ dns:
     - '*.blzstatic.cn'
     - '*.battle.net'
   
-  # 默认 DNS 服务器
+  # 默认 DNS 服务器 - 用于解析 DoH 域名
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
+    - 114.114.114.114
   
-  # 国内域名使用国内 DNS
+  # 主 DNS 服务器 - 国内域名
   nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
     - https://doh.pub/dns-query
     - https://dns.alidns.com/dns-query
   
-  # 国外域名使用代理 DNS
+  # 备用 DNS - 国外域名通过代理查询
   fallback:
+    - 8.8.8.8
+    - 1.1.1.1
     - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
+    - https://dns.google/dns-query
   
-  # fallback 过滤
+  # fallback 策略
   fallback-filter:
     geoip: true
     geoip-code: CN
     ipcidr:
       - 240.0.0.0/4
+      - 0.0.0.0/32
+    domain:
+      - '+.google.com'
+      - '+.facebook.com'
+      - '+.youtube.com'
+      - '+.twitter.com'
 
 # 代理节点配置
 proxies:
