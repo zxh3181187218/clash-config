@@ -1,3 +1,4 @@
+
 # ===== 基础设置 =====
 port: 7890
 socks-port: 7891
@@ -5,23 +6,23 @@ allow-lan: false
 mode: rule
 log-level: info
 external-controller: 127.0.0.1:9090
-secret: "your_password"  # 建议修改为自定义密码
+secret: "your_password"  # 修改为自定义密码
 
-# ===== 代理节点配置 =====
+# ===== 修复代理节点配置 =====
 proxies:
-  # Hysteria2 节点 (带混淆)
+  # 修复的Hysteria2节点配置
   - name: "🇺🇸 美国-Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
     password: "3n5T8b9NhTZe5cm2NW"
-    obfs:
+    obfs: 
       type: salamander
       password: "96Jj12oLbwuEQOrZ39"
     sni: "ipv6.zxh425.dpdns.org"
-    skip-cert-verify: false  # 保持证书验证
+    skip-cert-verify: false
 
-  # VLESS Reality 节点
+  # VLESS Reality节点 (保持正确)
   - name: "🇺🇸 美国-VLESS"
     type: vless
     server: ipv6.zxh425.dpdns.org
@@ -31,7 +32,7 @@ proxies:
     tls: true
     udp: true
     flow: "xtls-rprx-vision"
-    servername: "gateway.icloud.com"  # Reality 的伪装域名
+    servername: "gateway.icloud.com"
     reality-opts:
       public-key: "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4"
       short-id: "f71dda44e6f4f3b7"
@@ -44,7 +45,6 @@ proxy-groups:
     proxies:
       - "🇺🇸 美国-Hysteria2"
       - "🇺🇸 美国-VLESS"
-      - DIRECT
 
   - name: "🚀 自动选择"
     type: url-test
@@ -57,58 +57,44 @@ proxy-groups:
   - name: "🔰 流量分流"
     type: select
     proxies:
-      - "🚀 美国节点"
       - "🚀 自动选择"
+      - "🚀 美国节点"
       - DIRECT
 
 # ===== DNS 防泄露核心配置 =====
 dns:
   enable: true
   listen: 0.0.0.0:53
-  enhanced-mode: fake-ip   # 最高安全级别
-  fake-ip-range: 198.18.0.1/16
+  enhanced-mode: redir-host   # 手机端兼容性更好
   nameserver:
     - https://1.1.1.1/dns-query  # Cloudflare DoH
-    - https://dns.google/dns-query  # Google DoH
   fallback:
-    - tls://8.8.4.4:853  # Google DoT
-    - https://doh.opendns.com/dns-query  # OpenDNS
+    - tls://8.8.4.4:853  # Google DoT (fallback)
   fallback-filter:
     geoip: true
     geoip-code: CN
-    ipcidr:
-      - 240.0.0.0/4
 
-# ===== 规则分流 =====
+# ===== 优化规则分流 =====
 rules:
-  - RULE-SET,reject,REJECT  # 广告拦截
-  - GEOIP,CN,DIRECT  # 国内直连
-  - MATCH,"🔰 流量分流"  # 其他流量走美国节点
-
-# ===== TUN 模式全局保护 =====
+  # 国内直连
+  - GEOIP,CN,DIRECT
+  # 国外走代理
+  - MATCH,"🔰 流量分流"
+    
+# ===== 手机端特殊设置 =====
+interface-name: "wlan*"      # 匹配手机WiFi
 tun:
   enable: true
   stack: system
   dns-hijack:
-    - any:53  # 劫持所有 DNS 请求
+    - 0.0.0.0:53
   auto-route: true
-  auto-redir: true
-
-# ===== 规则集自动更新 =====
-rule-providers:
-  reject:  # 广告规则
-    type: http
-    behavior: domain
-    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
-    interval: 86400
-
-# ===== 强制代理 DNS 请求 =====
+  auto-detect-interface: true # 自动选择网络接口
+  
+# ===== 强制DNS安全 =====
 script:
-  engine: expr # 启用表达式引擎
-  code: |
-    function main(ctx) {
-      const dns_ports = [53, 853, 443]; 
-      if(dns_ports.includes(ctx.dst_port)) {
-        return { action: 'force_remote' };  # 强制所有 DNS 请求走代理
-      }
-    }
+  shortcuts:
+    force_dns: |
+      rules:
+        - DST-PORT,53,🔰 流量分流
+        - DST-PORT,853,🔰 流量分流
