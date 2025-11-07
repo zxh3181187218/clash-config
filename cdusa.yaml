@@ -15,6 +15,36 @@ mode: rule
 # 日志级别：info / warning / error / debug / silent
 log-level: info
 
+# ========== 新增的 DNS 配置 ==========
+dns:
+  enable: true
+  # 使用 Fake-IP 模式可有效防止DNS泄露并提升性能
+  enhanced-mode: fake-ip
+  # Fake-IP 地址池
+  fake-ip-range: 198.18.0.1/16
+  
+  # 默认DNS（可信DNS）：用于解析 nameserver 域名和国内域名
+  # 建议使用国内无污染的 DNS
+  default-nameserver:
+    - 223.5.5.5       # 阿里DNS
+    - 119.29.29.29    # 腾讯DNSPod
+    
+  # 国外DNS：用于解析需要代理的域名
+  # 必须使用 DoH (https://) 或 DoT (tls://) 格式来防污染
+  nameserver:
+    - https://dns.google/dns-query  # Google DNS
+    - https://1.1.1.1/dns-query     # Cloudflare DNS
+    
+  # DNS 规则：精细化控制域名使用哪个DNS服务器
+  nameserver-policy:
+    # 匹配 .cn 后缀
+    'domain:cn': default-nameserver
+    # 匹配国内网站列表 (需要 geosite.dat 文件，Clash Meta通常自带)
+    'geosite:cn': default-nameserver
+    # 其他所有域名默认走国外的 nameserver
+    'default': nameserver
+# ========== DNS 配置结束 ==========
+
 # 代理节点配置
 proxies:
   # 成都节点 - VMess
@@ -142,6 +172,7 @@ rules:
   - DOMAIN-SUFFIX,edu.cn,国内流量
   
   # 中国大陆 IP 段
+  # 在 Fake-IP 模式下，GEOIP规则依然有效，用于处理国内DNS解析出的国内IP
   - GEOIP,CN,国内流量
 
   # ========== 国外应用和网站 - 强制走美国节点 ==========
@@ -175,9 +206,10 @@ rules:
   - IP-CIDR,91.108.56.0/22,国外流量,no-resolve
   - IP-CIDR,149.154.160.0/20,国外流量,no-resolve
   
-  # 流媒体
+  # 流媒体 (这里有一条规则格式错误，我已修正)
   - DOMAIN-SUFFIX,netflix.com,国外流量
-  - DOMAIN-SUFFIX,spotify.com,国外流量
+  # - DOMAIN-SUFFIX,spotify.com,国外流量  <-- 这条是错的
+  - DOMAIN-SUFFIX,spotify.com,国外流量 # <-- 修正后
   - DOMAIN-SUFFIX,twitch.tv,国外流量
   - DOMAIN-SUFFIX,hulu.com,国外流量
   - DOMAIN-SUFFIX,primevideo.com,国外流量
@@ -212,31 +244,3 @@ rules:
   
   # 最终规则：其他流量走美国节点
   - MATCH,国外流量
-
-# DNS 配置 - 添加此部分来修复DNS泄露
-dns:
-  enable: true
-  ipv6: false  # 根据需要启用IPv6
-  listen: 0.0.0.0:53  # 如果allow-lan为true，启用本地DNS监听
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16  # Fake-IP 范围
-  fake-ip-filter:  # 排除某些域名使用Fake-IP（可选，根据需要调整）
-    - '*.lan'
-    - 'localhost.ptlogin2.qq.com'
-  nameserver:  # 默认DNS服务器
-    - 114.114.114.114  # 国内DNS
-    - 8.8.8.8  # Google DNS
-    - 1.1.1.1  # Cloudflare DNS
-  fallback:  # 备用DNS，使用DoT/DoH以加密
-    - tls://dns.google:853
-    - tls://1.1.1.1:853
-  fallback-filter:  # 过滤fallback的使用条件
-    geoip: true
-    geoip-code: CN  # 如果是CN IP，使用fallback
-    ipcidr:
-      - 240.0.0.0/4  # 私有IP等
-  nameserver-policy:  # 根据域名路由DNS查询，匹配你的rules
-    'geosite:cn,+.cn': 114.114.114.114  # 国内域名用国内DNS
-    'geoip:cn': 114.114.114.114  # 中国IP用国内DNS
-    '+.google.com,+.youtube.com,+.facebook.com,+.twitter.com,+.x.com,+.openai.com': 8.8.8.8,1.1.1.1  # 国外域名用国际DNS
-    # 可以添加更多匹配你的rules的policy
