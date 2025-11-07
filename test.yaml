@@ -6,7 +6,7 @@ mixed-port: 7890
 allow-lan: true
 bind-address: '*'
 mode: rule
-log-level: info
+log-level: debug
 external-controller: 127.0.0.1:9090
 ipv6: true
 
@@ -19,21 +19,12 @@ dns:
   ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
+  # fake-ip-filter 改为最小化，只保留必要的
   fake-ip-filter:
     - '*.lan'
-    - '*.local'
     - 'localhost.ptlogin2.qq.com'
-    - '+.srv.nintendo.net'
-    - '+.stun.playstation.net'
     - '+.msftconnecttest.com'
     - '+.msftncsi.com'
-    - '+.xboxlive.com'
-    - 'msftconnecttest.com'
-    - 'xbox.*.microsoft.com'
-    - '*.battlenet.com.cn'
-    - '*.battlenet.com'
-    - '*.blzstatic.cn'
-    - '*.battle.net'
   
   # 使用国外 DNS IP 地址（不使用域名）
   default-nameserver:
