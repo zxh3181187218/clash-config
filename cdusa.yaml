@@ -1,123 +1,190 @@
-# Corrected Clash Meta config (HY2 + VMESS + VLESS Reality)
+# Clash Meta 配置文件（已增强 DNS 防泄露）
 
-port: 7890
-socks-port: 7891
-redir-port: 7892
-allow-lan: false
-mode: Rule
-log-level: info
+mixed-port: 7890
+allow-lan: true
 external-controller: 127.0.0.1:9090
+mode: rule
+log-level: info
 
-proxies:
-  - name: "US-hysteria"
-    type: hysteria2
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    password: "3n5T8b9NhTZe5cm2NW"
-    sni: ipv6.zxh425.dpdns.org
-    skip-cert-verify: false
-    obfs: salamander
-    obfs-password: "96Jj12oLbwuEQOrZ39"
-    insecure: false
-
-  - name: "US-vmess"
-    type: vmess
-    server: 47.108.130.60
-    port: 51691
-    uuid: "51329a89-76f0-42e2-f7d9-d660147e4b15"
-    alterId: 0
-    cipher: auto
-    tls: false
-    network: ws
-    ws-opts:
-      path: "/"
-      headers:
-        Host: "pull.free.video.10010.com"
-
-  - name: "CD-vless-reality"
-    type: vless
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    uuid: "3a7d914d-86d9-4cec-8e65-b08f5c0b98ab"
-    flow: xtls-rprx-vision
-    tls: true
-    skip-cert-verify: false
-    sni: gateway.icloud.com
-    fingerprint: chrome
-    reality-opts:
-      public-key: "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4"
-      short-id: "f71dda44e6f4f3b7"
-
-proxy-groups:
-  - name: "US-Group"
-    type: select
-    proxies:
-      - "US-hysteria"
-      - "US-vmess"
-
-  - name: "China-CD"
-    type: select
-    proxies:
-      - "CD-vless-reality"
-
-  - name: "GLOBAL"
-    type: url-test
-    url: "http://www.gstatic.com/generate_204"
-    interval: 300
-    proxies:
-      - "US-hysteria"
-      - "US-vmess"
-      - "CD-vless-reality"
-
+###############################################################################
+# ✅ DNS 防泄露配置（最关键）
+###############################################################################
 dns:
   enable: true
   listen: 0.0.0.0:53
   ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
+
+  # fake-ip 例外（必须保留）
   fake-ip-filter:
+    - "*.lan"
     - "*.local"
-    - "localhost"
+    - localhost
+    - imei*
+    - router*
+    - '*.pool.ntp.org'
+
+  # ✅ 所有 DNS 请求走代理（DoH）
   nameserver:
     - https://1.1.1.1/dns-query
     - https://dns.google/dns-query
-  fallback:
+
+ fallback:
     - https://1.1.1.1/dns-query
     - tls://8.8.4.4:853
+
   fallback-filter:
     geoip: true
     ipcidr:
       - 0.0.0.0/0
 
+###############################################################################
+# ✅ TUN 模式 + DNS 劫持（彻底阻断系统 DNS）
+###############################################################################
 tun:
   enable: true
   stack: system
-  dns-hijack:
-    - 198.18.0.1:53
   auto-route: true
   auto-detect-interface: true
 
+  # ✅ 劫持所有系统 DNS → Fake-IP
+  dns-hijack:
+    - 198.18.0.1:53
+
+###############################################################################
+# ✅ 代理节点（保持你的原始可用格式）
+###############################################################################
+proxies:
+  - name: "成都-VMess"
+    type: vmess
+    server: 47.108.130.60
+    port: 51691
+    uuid: 51329a89-76f0-42e2-f7d9-d660147e4b15
+    alterId: 0
+    cipher: auto
+    udp: true
+    network: ws
+    ws-opts:
+      path: /
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "美国-VLESS"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: 7d1cbe5789dfd04b
+    client-fingerprint: chrome
+
+  - name: "美国-Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 3n5T8b9NhTZe5cm2NW
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
+    obfs: salamander
+    obfs-password: 96Jj12oLbwuEQOrZ39
+
+###############################################################################
+proxy-groups:
+  - name: "PROXY"
+    type: select
+    proxies:
+      - "美国节点"
+      - "成都节点"
+      - "美国-VLESS"
+      - "美国-Hysteria2"
+      - "成都-VMess"
+
+  - name: "成都节点"
+    type: select
+    proxies:
+      - "成都-VMess"
+
+  - name: "美国节点"
+    type: url-test
+    proxies:
+      - "美国-VLESS"
+      - "美国-Hysteria2"
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+
+  - name: "国内流量"
+    type: select
+    proxies:
+      - "成都-VMess"
+
+  - name: "国外流量"
+    type: select
+    proxies:
+      - "美国节点"
+      - "美国-VLESS"
+      - "美国-Hysteria2"
+
+###############################################################################
+# ✅ 规则
+###############################################################################
 rules:
-  - GEOIP,CN,China-CD
-  - DOMAIN-SUFFIX,cn,China-CD
-  - DOMAIN-SUFFIX,com.cn,China-CD
-  - DOMAIN-SUFFIX,gov.cn,China-CD
-  - DOMAIN-SUFFIX,edu.cn,China-CD
-  - DOMAIN-KEYWORD,qq,China-CD
-  - DOMAIN-KEYWORD,taobao,China-CD
-  - DOMAIN-KEYWORD,tencent,China-CD
-  - DOMAIN-KEYWORD,alipay,China-CD
-  - DOMAIN-KEYWORD,baidu,China-CD
-  - DOMAIN-SUFFIX,local,China-CD
+  # 国内流量
+  - DOMAIN-KEYWORD,baidu,国内流量
+  - DOMAIN-KEYWORD,taobao,国内流量
+  - DOMAIN-KEYWORD,tmall,国内流量
+  - DOMAIN-KEYWORD,alipay,国内流量
+  - DOMAIN-KEYWORD,zhifu,国内流量
+  - DOMAIN-KEYWORD,aliyun,国内流量
+  - DOMAIN-KEYWORD,alicdn,国内流量
+  - DOMAIN-KEYWORD,qq,国内流量
+  - DOMAIN-KEYWORD,wechat,国内流量
+  - DOMAIN-KEYWORD,weixin,国内流量
+  - DOMAIN-KEYWORD,tencent,国内流量
+  - DOMAIN-KEYWORD,douyin,国内流量
+  - DOMAIN-KEYWORD,jd,国内流量
+  - DOMAIN-KEYWORD,360,国内流量
+  - DOMAIN-KEYWORD,sina,国内流量
+  - DOMAIN-KEYWORD,weibo,国内流量
+  - DOMAIN-KEYWORD,bilibili,国内流量
+  - DOMAIN-KEYWORD,zhihu,国内流量
+  - DOMAIN-KEYWORD,163,国内流量
+  - DOMAIN-KEYWORD,netease,国内流量
+  - DOMAIN-KEYWORD,youku,国内流量
+  - DOMAIN-KEYWORD,iqiyi,国内流量
+  - DOMAIN-KEYWORD,meituan,国内流量
+  - DOMAIN-KEYWORD,dianping,国内流量
+  - DOMAIN-KEYWORD,ctrip,国内流量
+  - DOMAIN-KEYWORD,12306,国内流量
+  - DOMAIN-KEYWORD,pinduoduo,国内流量
+  - DOMAIN-SUFFIX,cn,国内流量
+  - DOMAIN-SUFFIX,com.cn,国内流量
+  - GEOIP,CN,国内流量
 
-  - IP-CIDR,10.0.0.0/8,GLOBAL
-  - IP-CIDR,172.16.0.0/12,GLOBAL
-  - IP-CIDR,192.168.0.0/16,GLOBAL
-  - IP-CIDR,127.0.0.0/8,GLOBAL
-  - IP-CIDR,::1/128,GLOBAL
-  - IP-CIDR,fe80::/10,GLOBAL
+  # 国外流量
+  - DOMAIN-SUFFIX,google.com,国外流量
+  - DOMAIN-SUFFIX,youtube.com,国外流量
+  - DOMAIN-SUFFIX,facebook.com,国外流量
+  - DOMAIN-SUFFIX,instagram.com,国外流量
+  - DOMAIN-SUFFIX,twitter.com,国外流量
+  - DOMAIN-SUFFIX,t.me,国外流量
+  - DOMAIN-SUFFIX,telegram.org,国外流量
+  - DOMAIN-SUFFIX,github.com,国外流量
+  - DOMAIN-SUFFIX,openai.com,国外流量
 
-  - DOMAIN,localhost,GLOBAL
-  - DOMAIN-SUFFIX,localdomain,GLOBAL
+  # ✅ 防止本机真实 IP 泄露（禁止直连私有网段）
+  - IP-CIDR,10.0.0.0/8,国外流量
+  - IP-CIDR,172.16.0.0/12,国外流量
+  - IP-CIDR,192.168.0.0/16,国外流量
+  - IP-CIDR,127.0.0.0/8,国外流量
+  - IP-CIDR,::1/128,国外流量
+  - IP-CIDR,fe80::/10,国外流量
 
-  - MATCH,US-Group
+  # 最终
+  - MATCH,国外流量
