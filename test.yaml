@@ -11,16 +11,22 @@ external-controller: 127.0.0.1:10813
 # DNS 配置
 dns:
   enable: true
-  ipv6: false
+  ipv6: true  # 改为 true，因为代理服务器可能需要 IPv6
+  prefer-h3: false
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
+    - 114.114.114.114
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
     - '*.lan'
     - localhost.ptlogin2.qq.com
+    - '+.srv.nintendo.net'
+    - '+.stun.playstation.net'
   nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
     - https://doh.pub/dns-query
     - https://dns.alidns.com/dns-query
   fallback:
