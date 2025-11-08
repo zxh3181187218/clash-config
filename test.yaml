@@ -92,23 +92,37 @@ rules:
   - DOMAIN,ipv6.zxh425.dpdns.org,DIRECT
   - DOMAIN-SUFFIX,dpdns.org,DIRECT
 
-  # Google 服务
+  # 1. Google CN 服务走代理
   - DOMAIN-SUFFIX,googleapis.cn,PROXY
   - DOMAIN-SUFFIX,gstatic.com,PROXY
 
-  # 阻止 QUIC
+  # 2. 阻断 UDP 443 (QUIC)
   - AND,(NETWORK,udp),(DST-PORT,443),REJECT
 
-  # 私有网络直连
+  # 3. 绕过局域网 IP
   - GEOIP,private,DIRECT,no-resolve
+
+  # 4. 绕过局域网域名
+  - GEOSITE,private,DIRECT
+
+  # 5. 绕过中国公共 DNS IP
   - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
   - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
+  - IP-CIDR6,2400:3200::1/128,DIRECT,no-resolve
+  - IP-CIDR6,2400:3200:baba::1/128,DIRECT,no-resolve
   - IP-CIDR,119.29.29.29/32,DIRECT,no-resolve
   - IP-CIDR,1.12.12.12/32,DIRECT,no-resolve
   - IP-CIDR,120.53.53.53/32,DIRECT,no-resolve
+  - IP-CIDR6,2402:4e00::/32,DIRECT,no-resolve
+  - IP-CIDR6,2402:4e00:1::/48,DIRECT,no-resolve
   - IP-CIDR,180.76.76.76/32,DIRECT,no-resolve
+  - IP-CIDR6,2400:da00::6666/128,DIRECT,no-resolve
   - IP-CIDR,114.114.114.114/32,DIRECT,no-resolve
   - IP-CIDR,114.114.115.115/32,DIRECT,no-resolve
+  - IP-CIDR,114.114.114.119/32,DIRECT,no-resolve
+  - IP-CIDR,114.114.115.119/32,DIRECT,no-resolve
+  - IP-CIDR,114.114.114.110/32,DIRECT,no-resolve
+  - IP-CIDR,114.114.115.110/32,DIRECT,no-resolve
   - IP-CIDR,180.184.1.1/32,DIRECT,no-resolve
   - IP-CIDR,180.184.2.2/32,DIRECT,no-resolve
   - IP-CIDR,101.226.4.6/32,DIRECT,no-resolve
@@ -119,21 +133,27 @@ rules:
   - IP-CIDR,210.2.4.8/32,DIRECT,no-resolve
   - IP-CIDR,52.80.66.66/32,DIRECT,no-resolve
   - IP-CIDR,117.50.22.22/32,DIRECT,no-resolve
+  - IP-CIDR6,2400:7fc0:849e:200::4/128,DIRECT,no-resolve
+  - IP-CIDR6,2404:c2c0:85d8:901::4/128,DIRECT,no-resolve
   - IP-CIDR,117.50.10.10/32,DIRECT,no-resolve
   - IP-CIDR,52.80.52.52/32,DIRECT,no-resolve
+  - IP-CIDR6,2400:7fc0:849e:200::8/128,DIRECT,no-resolve
+  - IP-CIDR6,2404:c2c0:85d8:901::8/128,DIRECT,no-resolve
   - IP-CIDR,117.50.60.30/32,DIRECT,no-resolve
   - IP-CIDR,52.80.60.30/32,DIRECT,no-resolve
 
-  # DNS 服务商直连
+  # 6. 绕过中国公共 DNS 域名
   - DOMAIN-SUFFIX,alidns.com,DIRECT
   - DOMAIN-SUFFIX,doh.pub,DIRECT
   - DOMAIN-SUFFIX,dot.pub,DIRECT
   - DOMAIN-SUFFIX,360.cn,DIRECT
   - DOMAIN-SUFFIX,onedns.net,DIRECT
 
-  # 中国大陆域名和 IP 直连
+  # 7. 绕过中国 IP
+  - GEOIP,CN,DIRECT,no-resolve
+
+  # 8. 绕过中国域名
   - GEOSITE,CN,DIRECT
-  - GEOIP,CN,DIRECT
 
   # 其他流量走代理
   - MATCH,PROXY
