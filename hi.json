@@ -1,0 +1,288 @@
+{
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "remote",
+        "address": "tcp://8.8.8.8",
+        "strategy": "prefer_ipv4",
+        "detour": "proxy"
+      },
+      {
+        "tag": "local",
+        "address": "223.5.5.5",
+        "strategy": "prefer_ipv4",
+        "detour": "direct"
+      },
+      {
+        "tag": "block",
+        "address": "rcode://success"
+      },
+      {
+        "tag": "chengdu_dns",
+        "address": "223.5.5.5",
+        "strategy": "prefer_ipv4"
+      }
+    ],
+    "rules": [
+      {
+        "server": "chengdu_dns",
+        "rule_set": [
+          "geosite-cn"
+        ]
+      },
+      {
+        "server": "remote",
+        "clash_mode": "Global"
+      },
+      {
+        "server": "chengdu_dns",
+        "clash_mode": "Direct"
+      }
+    ],
+    "final": "remote"
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "socks",
+      "listen": "127.0.0.1",
+      "listen_port": 10808,
+      "sniff": true,
+      "sniff_override_destination": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "urltest",
+      "tag": "proxy",
+      "outbounds": [
+        "hysteria2-node",
+        "vless-node"
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "5m",
+      "tolerance": 50
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2-node",
+      "server": "ipv6.zxh425.dpdns.org",
+      "server_port": 443,
+      "up_mbps": 100,
+      "down_mbps": 100,
+      "password": "3n5T8b9NhTZe5cm2NW",
+      "tls": {
+        "enabled": true,
+        "server_name": "ipv6.zxh425.dpdns.org",
+        "insecure": false
+      },
+      "obfs": {
+        "type": "salamander",
+        "password": "96Jj12oLbwuEQOrZ39"
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "vless-node",
+      "server": "ipv6.zxh425.dpdns.org",
+      "server_port": 443,
+      "uuid": "3a7d914d-86d9-4cec-8e65-b08f5c0b98ab",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "gateway.icloud.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4",
+          "short_id": "f71dda44e6f4f3b7"
+        }
+      }
+    },
+    {
+      "type": "vmess",
+      "tag": "chengdu-node",
+      "server": "47.108.130.60",
+      "server_port": 51691,
+      "uuid": "51329a89-76f0-42e2-f7d9-d660147e4b15",
+      "security": "auto",
+      "alter_id": 0,
+      "transport": {
+        "type": "ws",
+        "path": "/",
+        "headers": {
+          "Host": "pull.free.video.10010.com"
+        }
+      }
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    },
+    {
+      "type": "dns",
+      "tag": "dns_out"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "outbound": "dns_out",
+        "protocol": [
+          "dns"
+        ]
+      },
+      {
+        "outbound": "chengdu-node",
+        "clash_mode": "Direct"
+      },
+      {
+        "outbound": "proxy",
+        "clash_mode": "Global"
+      },
+      {
+        "outbound": "chengdu-node",
+        "rule_set": [
+          "geosite-cn"
+        ]
+      },
+      {
+        "outbound": "chengdu-node",
+        "rule_set": [
+          "geoip-cn"
+        ]
+      },
+      {
+        "outbound": "chengdu-node",
+        "rule_set": [
+          "geosite-private"
+        ]
+      },
+      {
+        "outbound": "chengdu-node",
+        "ip_cidr": [
+          "223.5.5.5/32",
+          "223.6.6.6/32",
+          "2400:3200::1/128",
+          "2400:3200:baba::1/128",
+          "119.29.29.29/32",
+          "1.12.12.12/32",
+          "120.53.53.53/32",
+          "2402:4e00::/32",
+          "2402:4e00:1::/48",
+          "180.76.76.76/32",
+          "2400:da00::6666/128",
+          "114.114.114.114/32",
+          "114.114.115.115/32",
+          "114.114.114.119/32",
+          "114.114.115.119/32",
+          "114.114.114.110/32",
+          "114.114.115.110/32",
+          "180.184.1.1/32",
+          "180.184.2.2/32",
+          "101.226.4.6/32",
+          "218.30.118.6/32",
+          "123.125.81.6/32",
+          "140.207.198.6/32",
+          "1.2.4.8/32",
+          "210.2.4.8/32",
+          "52.80.66.66/32",
+          "117.50.22.22/32",
+          "2400:7fc0:849e:200::4/128",
+          "2404:c2c0:85d8:901::4/128",
+          "117.50.10.10/32",
+          "52.80.52.52/32",
+          "2400:7fc0:849e:200::8/128",
+          "2404:c2c0:85d8:901::8/128",
+          "117.50.60.30/32",
+          "52.80.60.30/32"
+        ]
+      },
+      {
+        "outbound": "chengdu-node",
+        "domain": [
+          "alidns.com",
+          "doh.pub",
+          "dot.pub",
+          "360.cn",
+          "onedns.net"
+        ],
+        "domain_suffix": [
+          ".alidns.com",
+          ".doh.pub",
+          ".dot.pub",
+          ".360.cn",
+          ".onedns.net"
+        ]
+      },
+      {
+        "outbound": "proxy",
+        "domain": [
+          "googleapis.cn",
+          "gstatic.com"
+        ],
+        "domain_suffix": [
+          ".googleapis.cn",
+          ".gstatic.com"
+        ]
+      },
+      {
+        "outbound": "block",
+        "network": [
+          "udp"
+        ],
+        "port": [
+          443
+        ]
+      },
+      {
+        "outbound": "direct",
+        "ip_is_private": true
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geosite-private",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs",
+        "download_detour": "proxy"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+        "download_detour": "proxy"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+        "download_detour": "proxy"
+      }
+    ],
+    "final": "proxy",
+    "auto_detect_interface": true
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true
+    },
+    "clash_api": {
+      "external_controller": "127.0.0.1:10813"
+    }
+  }
+}
