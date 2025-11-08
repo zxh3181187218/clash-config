@@ -1,64 +1,47 @@
-# Clash Meta 配置文件
-# 端口配置
 mixed-port: 10808
 allow-lan: false
-bind-address: 127.0.0.1
+bind-address: '*'
 mode: rule
 log-level: warning
-ipv6: false
 external-controller: 127.0.0.1:10813
 
-# DNS 配置
 dns:
   enable: true
-  ipv6: true
-  prefer-h3: false
-  # 用于解析代理服务器域名和国内域名
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-    - 114.114.114.114
+  listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter:
-    - '*.lan'
-    - 'localhost.ptlogin2.qq.com'
-    - '+.srv.nintendo.net'
-    - '+.stun.playstation.net'
-    # 代理服务器域名不使用 fake-ip
-    - 'ipv6.zxh425.dpdns.org'
-    - '*.dpdns.org'
-  # 主 DNS 服务器 - 用于解析所有域名
   nameserver:
     - 223.5.5.5
     - 119.29.29.29
-    - 8.8.8.8
-    - 1.1.1.1
-  # 针对特定域名的 DNS 策略
-  nameserver-policy:
-    # 代理服务器域名强制本地DNS
-    'ipv6.zxh425.dpdns.org': 
-      - 223.5.5.5
-      - 119.29.29.29
-    '*.dpdns.org':
-      - 223.5.5.5
-      - 119.29.29.29
-    # 国内域名用国内DNS
-    'geosite:cn':
-      - 223.5.5.5
-      - 119.29.29.29
-    # 国外域名用国外DNS，走代理查询
-    'geosite:geolocation-!cn':
-      - 'https://1.1.1.1/dns-query#PROXY'
-      - 'https://8.8.8.8/dns-query#PROXY'
+  fallback:
+    - https://dns.google/dns-query
+    - https://1.1.1.1/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
 
-# 代理节点
 proxies:
+  - name: "成都-VMess"
+    type: vmess
+    server: 47.108.130.60
+    port: 51691
+    uuid: 51329a89-76f0-42e2-f7d9-d660147e4b15
+    alterId: 0
+    cipher: auto
+    udp: true
+    network: ws
+    ws-opts:
+      path: /
+      headers:
+        Host: pull.free.video.10010.com
+
   - name: "Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
-    password: 3n5T8b9NhTZe5cm2NW
+    password: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     obfs: salamander
     obfs-password: 96Jj12oLbwuEQOrZ39
     sni: ipv6.zxh425.dpdns.org
@@ -66,94 +49,68 @@ proxies:
     up: 100
     down: 100
 
-# 代理组
+  - name: "VLESS-Reality"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    flow: xtls-rprx-vision
+    network: tcp
+    tls: true
+    udp: true
+    servername: gateway.icloud.com
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+    client-fingerprint: chrome
+
 proxy-groups:
-  - name: "PROXY"
-    type: select
+  - name: "国外节点"
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
     proxies:
       - Hysteria2
-      - DIRECT
+      - VLESS-Reality
 
-  - name: "Global"
+  - name: "国内节点"
     type: select
     proxies:
-      - PROXY
+      - 成都-VMess
       - DIRECT
 
-  - name: "Domestic"
+  - name: "全局代理"
     type: select
     proxies:
+      - 国外节点
+      - 国内节点
+      - Hysteria2
+      - VLESS-Reality
+      - 成都-VMess
       - DIRECT
-      - PROXY
 
-# 规则
 rules:
-  # 关键：代理服务器域名必须直连，不能走代理
-  - DOMAIN,ipv6.zxh425.dpdns.org,DIRECT
-  - DOMAIN-SUFFIX,dpdns.org,DIRECT
-
-  # 1. Google CN 服务走代理
-  - DOMAIN-SUFFIX,googleapis.cn,PROXY
-  - DOMAIN-SUFFIX,gstatic.com,PROXY
-
-  # 2. 阻断 UDP 443 (QUIC)
-  - AND,(NETWORK,udp),(DST-PORT,443),REJECT
-
-  # 3. 绕过局域网 IP
-  - GEOIP,private,DIRECT,no-resolve
-
-  # 4. 绕过局域网域名
-  - GEOSITE,private,DIRECT
-
-  # 5. 绕过中国公共 DNS IP
-  - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
-  - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
-  - IP-CIDR6,2400:3200::1/128,DIRECT,no-resolve
-  - IP-CIDR6,2400:3200:baba::1/128,DIRECT,no-resolve
-  - IP-CIDR,119.29.29.29/32,DIRECT,no-resolve
-  - IP-CIDR,1.12.12.12/32,DIRECT,no-resolve
-  - IP-CIDR,120.53.53.53/32,DIRECT,no-resolve
-  - IP-CIDR6,2402:4e00::/32,DIRECT,no-resolve
-  - IP-CIDR6,2402:4e00:1::/48,DIRECT,no-resolve
-  - IP-CIDR,180.76.76.76/32,DIRECT,no-resolve
-  - IP-CIDR6,2400:da00::6666/128,DIRECT,no-resolve
-  - IP-CIDR,114.114.114.114/32,DIRECT,no-resolve
-  - IP-CIDR,114.114.115.115/32,DIRECT,no-resolve
-  - IP-CIDR,114.114.114.119/32,DIRECT,no-resolve
-  - IP-CIDR,114.114.115.119/32,DIRECT,no-resolve
-  - IP-CIDR,114.114.114.110/32,DIRECT,no-resolve
-  - IP-CIDR,114.114.115.110/32,DIRECT,no-resolve
-  - IP-CIDR,180.184.1.1/32,DIRECT,no-resolve
-  - IP-CIDR,180.184.2.2/32,DIRECT,no-resolve
-  - IP-CIDR,101.226.4.6/32,DIRECT,no-resolve
-  - IP-CIDR,218.30.118.6/32,DIRECT,no-resolve
-  - IP-CIDR,123.125.81.6/32,DIRECT,no-resolve
-  - IP-CIDR,140.207.198.6/32,DIRECT,no-resolve
-  - IP-CIDR,1.2.4.8/32,DIRECT,no-resolve
-  - IP-CIDR,210.2.4.8/32,DIRECT,no-resolve
-  - IP-CIDR,52.80.66.66/32,DIRECT,no-resolve
-  - IP-CIDR,117.50.22.22/32,DIRECT,no-resolve
-  - IP-CIDR6,2400:7fc0:849e:200::4/128,DIRECT,no-resolve
-  - IP-CIDR6,2404:c2c0:85d8:901::4/128,DIRECT,no-resolve
-  - IP-CIDR,117.50.10.10/32,DIRECT,no-resolve
-  - IP-CIDR,52.80.52.52/32,DIRECT,no-resolve
-  - IP-CIDR6,2400:7fc0:849e:200::8/128,DIRECT,no-resolve
-  - IP-CIDR6,2404:c2c0:85d8:901::8/128,DIRECT,no-resolve
-  - IP-CIDR,117.50.60.30/32,DIRECT,no-resolve
-  - IP-CIDR,52.80.60.30/32,DIRECT,no-resolve
-
-  # 6. 绕过中国公共 DNS 域名
-  - DOMAIN-SUFFIX,alidns.com,DIRECT
-  - DOMAIN-SUFFIX,doh.pub,DIRECT
-  - DOMAIN-SUFFIX,dot.pub,DIRECT
-  - DOMAIN-SUFFIX,360.cn,DIRECT
-  - DOMAIN-SUFFIX,onedns.net,DIRECT
-
-  # 7. 绕过中国 IP
-  - GEOIP,CN,DIRECT,no-resolve
-
-  # 8. 绕过中国域名
-  - GEOSITE,CN,DIRECT
-
-  # 其他流量走代理
-  - MATCH,PROXY
+  - DOMAIN-SUFFIX,googleapis.cn,国外节点
+  - DOMAIN-SUFFIX,gstatic.com,国外节点
+  
+  # 国内DNS
+  - IP-CIDR,223.5.5.5/32,国内节点,no-resolve
+  - IP-CIDR,223.6.6.6/32,国内节点,no-resolve
+  - IP-CIDR,119.29.29.29/32,国内节点,no-resolve
+  - IP-CIDR,114.114.114.114/32,国内节点,no-resolve
+  - IP-CIDR,180.76.76.76/32,国内节点,no-resolve
+  - DOMAIN-SUFFIX,alidns.com,国内节点
+  - DOMAIN-SUFFIX,doh.pub,国内节点
+  - DOMAIN-SUFFIX,360.cn,国内节点
+  
+  # 局域网
+  - GEOIP,LAN,DIRECT
+  - GEOIP,PRIVATE,DIRECT
+  
+  # 中国大陆
+  - GEOIP,CN,国内节点
+  - GEOSITE,CN,国内节点
+  
+  # 默认规则
+  - MATCH,国外节点
