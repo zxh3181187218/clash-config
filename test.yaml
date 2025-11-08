@@ -11,8 +11,9 @@ external-controller: 127.0.0.1:10813
 # DNS 配置
 dns:
   enable: true
-  ipv6: true  # 改为 true，因为代理服务器可能需要 IPv6
+  ipv6: true
   prefer-h3: false
+  # 这些 DNS 服务器用于解析代理服务器域名，必须直连
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
@@ -21,14 +22,27 @@ dns:
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
     - '*.lan'
-    - localhost.ptlogin2.qq.com
+    - 'localhost.ptlogin2.qq.com'
     - '+.srv.nintendo.net'
     - '+.stun.playstation.net'
+    # 关键：代理服务器域名不使用 fake-ip
+    - 'ipv6.zxh425.dpdns.org'
+    - '*.dpdns.org'
   nameserver:
     - 223.5.5.5
     - 119.29.29.29
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
+  nameserver-policy:
+    # 代理服务器域名强制使用本地直连DNS解析
+    'ipv6.zxh425.dpdns.org': 
+      - 223.5.5.5
+      - 119.29.29.29
+    '*.dpdns.org':
+      - 223.5.5.5
+      - 119.29.29.29
+    # 国内域名使用国内DNS
+    'geosite:cn':
+      - 223.5.5.5
+      - 119.29.29.29
   fallback:
     - https://1.1.1.1/dns-query
     - https://dns.google/dns-query
@@ -74,6 +88,10 @@ proxy-groups:
 
 # 规则
 rules:
+  # 关键：代理服务器域名必须直连，不能走代理
+  - DOMAIN,ipv6.zxh425.dpdns.org,DIRECT
+  - DOMAIN-SUFFIX,dpdns.org,DIRECT
+
   # Google 服务
   - DOMAIN-SUFFIX,googleapis.cn,PROXY
   - DOMAIN-SUFFIX,gstatic.com,PROXY
