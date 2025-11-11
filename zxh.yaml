@@ -1,215 +1,118 @@
-
 # Clash Meta 配置文件
-
-# 混合端口，HTTP 和 SOCKS5 用一个端口
-mixed-port: 7890
-
-# 允许局域网的连接
-allow-lan: true
-
-# Clash 的 RESTful API 监听地址
+port: 7890
+socks-port: 7891
+mixed-port: 10808
+allow-lan: false
+bind-address: '*'
+mode: rule
+log-level: warning
+ipv6: true
 external-controller: 127.0.0.1:9090
 
-# 规则模式：rule（规则） / global（全局代理）/ direct（全局直连）
-mode: rule
+# DNS 配置
+dns:
+  enable: true
+  ipv6: true
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - localhost.ptlogin2.qq.com
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://dns.cloudflare.com/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+  nameserver-policy:
+    'geosite:cn':
+      - https://doh.pub/dns-query
+      - https://dns.alidns.com/dns-query
+    'geosite:gfw,geolocation-!cn':
+      - https://dns.cloudflare.com/dns-query
+      - https://dns.google/dns-query
 
-# 日志级别：info / warning / error / debug / silent
-log-level: info
-
-# 代理节点配置
+# 代理节点
 proxies:
-  # 成都节点 - VMess
-  - name: "成都-VMess"
-    type: vmess
-    server: 47.108.130.60
-    port: 51691
-    uuid: 51329a89-76f0-42e2-f7d9-d660147e4b15
-    alterId: 0
-    cipher: auto
-    udp: true
-    network: ws
-    ws-opts:
-      path: /
-      headers:
-        Host: pull.free.video.10010.com
-
-  # 美国节点 - VLESS Reality
-  - name: "美国-VLESS"
-    type: vless
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
-    network: tcp
-    udp: true
-    tls: true
-    flow: xtls-rprx-vision
-    servername: gateway.icloud.com
-    reality-opts:
-      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
-      short-id: 7d1cbe5789dfd04b
-    client-fingerprint: chrome
-
-  # 美国节点 - Hysteria2
-  - name: "美国-Hysteria2"
+  - name: "hy2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
     password: 3n5T8b9NhTZe5cm2NW
-    sni: ipv6.zxh425.dpdns.org
-    skip-cert-verify: false
     obfs: salamander
     obfs-password: 96Jj12oLbwuEQOrZ39
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
+    # alpn:
+    #   - h3
 
-# 代理组配置
+# 代理组
 proxy-groups:
-  # 主代理选择组（可手动切换）
-  - name: "PROXY"
+  - name: "🚀 节点选择"
     type: select
     proxies:
-      - "美国节点"
-      - "成都节点"
-      - "美国-VLESS"
-      - "美国-Hysteria2"
-      - "成都-VMess"
+      - ♻️ 自动选择
+      - 🎯 全球直连
+      - hy2
 
-  # 成都节点 - 固定用于国内流量
-  - name: "成都节点"
-    type: select
-    proxies:
-      - "成都-VMess"
-
-  # 美国节点 - 自动选择最快的美国节点
-  - name: "美国节点"
+  - name: "♻️ 自动选择"
     type: url-test
-    proxies:
-      - "美国-VLESS"
-      - "美国-Hysteria2"
-    url: 'http://www.gstatic.com/generate_204'
+    url: http://www.gstatic.com/generate_204
     interval: 300
+    tolerance: 50
+    proxies:
+      - hy2
 
-  # 国内应用和网站 - 强制走成都节点
-  - name: "国内流量"
+  - name: "🎯 全球直连"
     type: select
     proxies:
-      - "成都-VMess"
+      - DIRECT
 
-  # 国外应用和网站 - 强制走美国节点
-  - name: "国外流量"
+  - name: "🛑 广告拦截"
     type: select
     proxies:
-      - "美国节点"
-      - "美国-VLESS"
-      - "美国-Hysteria2"
+      - REJECT
+      - DIRECT
 
-# 规则配置
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - 🎯 全球直连
+
+# 规则
 rules:
-  # ========== 国内应用和网站 - 强制走成都节点 ==========
-  
-  # 国内常用应用
-  - DOMAIN-KEYWORD,baidu,国内流量
-  - DOMAIN-KEYWORD,taobao,国内流量
-  - DOMAIN-KEYWORD,tmall,国内流量
-  - DOMAIN-KEYWORD,alipay,国内流量
-  - DOMAIN-KEYWORD,zhifu,国内流量
-  - DOMAIN-KEYWORD,aliyun,国内流量
-  - DOMAIN-KEYWORD,alicdn,国内流量
-  - DOMAIN-KEYWORD,qq,国内流量
-  - DOMAIN-KEYWORD,wechat,国内流量
-  - DOMAIN-KEYWORD,weixin,国内流量
-  - DOMAIN-KEYWORD,tencent,国内流量
-  - DOMAIN-KEYWORD,douyin,国内流量
-  - DOMAIN-KEYWORD,jd,国内流量
-  - DOMAIN-KEYWORD,360,国内流量
-  - DOMAIN-KEYWORD,sina,国内流量
-  - DOMAIN-KEYWORD,weibo,国内流量
-  - DOMAIN-KEYWORD,bilibili,国内流量
-  - DOMAIN-KEYWORD,zhihu,国内流量
-  - DOMAIN-KEYWORD,163,国内流量
-  - DOMAIN-KEYWORD,netease,国内流量
-  - DOMAIN-KEYWORD,youku,国内流量
-  - DOMAIN-KEYWORD,iqiyi,国内流量
-  - DOMAIN-KEYWORD,meituan,国内流量
-  - DOMAIN-KEYWORD,dianping,国内流量
-  - DOMAIN-KEYWORD,ctrip,国内流量
-  - DOMAIN-KEYWORD,12306,国内流量
-  - DOMAIN-KEYWORD,pinduoduo,国内流量
-  
-  # 国内域名后缀
-  - DOMAIN-SUFFIX,cn,国内流量
-  - DOMAIN-SUFFIX,com.cn,国内流量
-  - DOMAIN-SUFFIX,net.cn,国内流量
-  - DOMAIN-SUFFIX,org.cn,国内流量
-  - DOMAIN-SUFFIX,gov.cn,国内流量
-  - DOMAIN-SUFFIX,edu.cn,国内流量
-  
-  # 中国大陆 IP 段
-  - GEOIP,CN,国内流量
-
-  # ========== 国外应用和网站 - 强制走美国节点 ==========
-  
   # Google 服务
-  - DOMAIN-SUFFIX,google.com,国外流量
-  - DOMAIN-SUFFIX,googleapis.com,国外流量
-  - DOMAIN-SUFFIX,googleusercontent.com,国外流量
-  - DOMAIN-SUFFIX,gstatic.com,国外流量
-  - DOMAIN-SUFFIX,youtube.com,国外流量
-  - DOMAIN-SUFFIX,ytimg.com,国外流量
-  - DOMAIN-SUFFIX,googlevideo.com,国外流量
-  - DOMAIN-KEYWORD,google,国外流量
-  - DOMAIN-KEYWORD,youtube,国外流量
-  
-  # 社交媒体
-  - DOMAIN-SUFFIX,facebook.com,国外流量
-  - DOMAIN-SUFFIX,instagram.com,国外流量
-  - DOMAIN-SUFFIX,twitter.com,国外流量
-  - DOMAIN-SUFFIX,x.com,国外流量
-  - DOMAIN-SUFFIX,reddit.com,国外流量
-  - DOMAIN-SUFFIX,discord.com,国外流量
-  - DOMAIN-SUFFIX,tiktok.com,国外流量
-  
-  # Telegram
-  - DOMAIN-SUFFIX,t.me,国外流量
-  - DOMAIN-SUFFIX,telegram.org,国外流量
-  - DOMAIN-SUFFIX,telegram.me,国外流量
-  - IP-CIDR,91.108.4.0/22,国外流量,no-resolve
-  - IP-CIDR,91.108.8.0/22,国外流量,no-resolve
-  - IP-CIDR,91.108.56.0/22,国外流量,no-resolve
-  - IP-CIDR,149.154.160.0/20,国外流量,no-resolve
-  
-  # 流媒体
-  - DOMAIN-SUFFIX,netflix.com,国外流量
-  - DOMAIN-SUFFIX,spotify.com,国外流量
-  - DOMAIN-SUFFIX,twitch.tv,国外流量
-  - DOMAIN-SUFFIX,hulu.com,国外流量
-  - DOMAIN-SUFFIX,primevideo.com,国外流量
-  - DOMAIN-SUFFIX,disneyplus.com,国外流量
-  - DOMAIN-KEYWORD,netflix,国外流量
-  - DOMAIN-KEYWORD,spotify,国外流量
-  
-  # 科技网站
-  - DOMAIN-SUFFIX,github.com,国外流量
-  - DOMAIN-SUFFIX,githubusercontent.com,国外流量
-  - DOMAIN-SUFFIX,stackoverflow.com,国外流量
-  - DOMAIN-SUFFIX,medium.com,国外流量
-  - DOMAIN-SUFFIX,cloudflare.com,国外流量
-  
-  # OpenAI / ChatGPT
-  - DOMAIN-SUFFIX,openai.com,国外流量
-  - DOMAIN-SUFFIX,chatgpt.com,国外流量
-  - DOMAIN-KEYWORD,openai,国外流量
-  
-  # 其他常用国外服务
-  - DOMAIN-SUFFIX,wikipedia.org,国外流量
-  - DOMAIN-SUFFIX,wikimedia.org,国外流量
-  - DOMAIN-SUFFIX,amazon.com,国外流量
-  - DOMAIN-SUFFIX,ebay.com,国外流量
-  - DOMAIN-SUFFIX,paypal.com,国外流量
-  
-  # 局域网直连
-  - IP-CIDR,192.168.0.0/16,DIRECT
-  - IP-CIDR,10.0.0.0/8,DIRECT
-  - IP-CIDR,172.16.0.0/12,DIRECT
-  - IP-CIDR,127.0.0.0/8,DIRECT
-  
-  # 最终规则：其他流量走美国节点
-  - MATCH,国外流量
+  - DOMAIN-SUFFIX,googleapis.cn,🚀 节点选择
+  - DOMAIN-SUFFIX,gstatic.com,🚀 节点选择
+
+  # 屏蔽 QUIC (UDP 443)
+  - AND,(NETWORK,UDP),(DST-PORT,443),REJECT
+
+  # 局域网地址
+  - GEOIP,private,DIRECT,no-resolve
+  - GEOSITE,private,DIRECT
+
+  # 中国 DNS 服务器
+  - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
+  - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
+  - IP-CIDR,119.29.29.29/32,DIRECT,no-resolve
+  - IP-CIDR,1.12.12.12/32,DIRECT,no-resolve
+  - IP-CIDR,120.53.53.53/32,DIRECT,no-resolve
+  - IP-CIDR,114.114.114.114/32,DIRECT,no-resolve
+  - IP-CIDR,180.76.76.76/32,DIRECT,no-resolve
+
+  # 中国域名和 IP
+  - GEOSITE,cn,DIRECT
+  - GEOIP,cn,DIRECT
+
+  # 国际流量走代理
+  - MATCH,🐟 漏网之鱼
