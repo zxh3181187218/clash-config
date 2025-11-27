@@ -1,88 +1,53 @@
-# Clash Meta / Mihomo Configuration
 port: 7890
 socks-port: 7891
-mixed-port: 2080 # 对应原配置 mixed-in 端口
-allow-lan: false
+allow-lan: true
 mode: rule
 log-level: info
-ipv6: true # 原配置使用了 IPv6 服务器地址，必须开启
-
-# 外部控制配置（用于面板）
+ipv6: true
 external-controller: 127.0.0.1:9090
 
-# DNS 配置
 dns:
   enable: true
-  listen: 0.0.0.0:1053
-  ipv6: true
+  listen: 0.0.0.0:53
   enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16 # 对应原配置 198.18.0.0/15 (Clash通常默认/16，兼容性更好)
-  fake-ip-filter:
-    - "*"
-    - "+.lan"
-    - "+.local"
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+  fake-ip-range: 198.18.0.1/16
   nameserver:
-    - https://dns.google/dns-query # 对应 dns-remote
-  nameserver-policy:
-    # 对应原配置 dns-direct (国内域名走阿里DoH)
-    "geosite:cn": https://223.5.5.5/dns-query
+    - https://dns.google/dns-query
+    - https://223.5.5.5/dns-query
 
-# TUN 模式配置
-tun:
-  enable: true
-  stack: gvisor # 对应原配置 gvisor
-  auto-route: true
-  auto-detect-interface: true
-  dns-hijack:
-    - any:53
-  mtu: 9000 # 对应原配置 MTU
-
-# 代理节点
 proxies:
-  - name: "Proxy-Node"
-    type: vmess
-    server: 2001:2c0:100:415:17:cafe:110:1
-    port: 25803
-    uuid: 01f5273a-4bd7-427b-bdb4-0066690eb890
-    alterId: 0
-    cipher: auto
-    network: ws
-    ws-opts:
-      path: "/01f5273a-4bd7-427b-bdb4-0066690eb890-vm" # 注意：Websocket路径通常需要以 / 开头
-      headers:
-        Host: pull.free.video.10010.com
+  - name: "US-Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 3n5T8b9NhTZe5cm2NW
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
+    alpn:
+      - h3
+    obfs: salamander
+    obfs-password: 96Jj12oLbwuEQOrZ39
 
-# 代理组
 proxy-groups:
   - name: "Proxy"
     type: select
     proxies:
-      - "Proxy-Node"
+      - "US-Hysteria2"
       - DIRECT
 
-# 规则配置
 rules:
-  # 1. 阻断 UDP 443 (QUIC) - 对应原配置 reject udp/443
+  # 拦截 QUIC (对应原配置 reject udp 443)
   - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
-
-  # 2. 拦截广告 - 对应 geosite:category-ads-all
+  
+  # 广告拦截
   - GEOSITE,category-ads-all,REJECT
-
-  # 3. Google API CN 强制代理 - 对应 googleapis.cn
+  
+  # Google CN 走代理 (对应原配置 domain_suffix: googleapis.cn)
   - DOMAIN-SUFFIX,googleapis.cn,Proxy
-
-  # 4. 国内域名直连 - 对应 geosite:cn
+  
+  # 国内直连 (对应原配置 geosite:cn, geoip:cn)
   - GEOSITE,cn,DIRECT
-
-  # 5. 国内IP直连 - 对应 geoip:cn
   - GEOIP,cn,DIRECT
-
-  # 6. 局域网/组播IP拦截 - 对应原配置的 reject ip_cidr
-  - IP-CIDR,224.0.0.0/3,REJECT,no-resolve
-  - IP-CIDR6,ff00::/8,REJECT,no-resolve
-
-  # 7. 默认漏网之鱼走代理
+  
+  # 兜底规则
   - MATCH,Proxy
