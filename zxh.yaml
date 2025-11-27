@@ -1,66 +1,97 @@
-mixed-port: 7890
-allow-lan: true
-mode: rule
-log-level: warning
+# ---------------------------------------------------
+# Clash Meta (Mihomo) 配置文件
+# 生成时间: 2025-11-28
+# ---------------------------------------------------
 
+# 基础设置
+mixed-port: 2080               # 对应原配置的 mixed-in 端口
+allow-lan: false               # 原配置监听 127.0.0.1，故不开放 LAN
+mode: rule
+log-level: info
+ipv6: true                     # 原配置包含 IPv6
+
+# 外部控制 (可选，用于面板)
+external-controller: 127.0.0.1:9090
+
+# DNS 设置 (对应原配置的 dns 模块)
 dns:
   enable: true
   listen: 0.0.0.0:1053
-  ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.0/15
   fake-ip-filter:
+    - "*"
     - "+.lan"
     - "+.local"
+  
+  # 默认 DNS (用于解析 DoH 域名等)
+  default-nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+  
+  # 主要 NameServer (国外/代理 DNS)
   nameserver:
     - https://dns.google/dns-query
+  
+  # Fallback (国内/直连 DNS)
   fallback:
     - https://223.5.5.5/dns-query
-  default-nameserver:
-    - 114.114.114.114
+    - https://1.12.12.12/dns-query
+  
+  # 配置何时使用 Fallback 回退 (根据 GeoIP 判断)
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
 
+# 代理节点 (Hysteria2)
 proxies:
-  - name: 美国-Hysteria2
+  - name: "🇺🇸 美国 Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
-    password: 3n5T8b9NhTZe5cm2NW
-    obfs:
-      type: salamander
-      password: 96Jj12oLbwuEQOrZ39
+    password: "3n5T8b9NhTZe5cm2NW"
+    # 对应原配置的 obfs
+    obfs: salamander
+    obfs-password: "96Jj12oLbwuEQOrZ39"
+    # 对应 tls 设置
     sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: false
     alpn:
       - h3
-    skip-cert-verify: false
-    download-bandwidth: 0
-    upload-bandwidth: 0
+    # 对应 hop_interval: 10s
+    hop-interval: 10
+    # 对应 up_mbps / down_mbps (0 为不限制)
+    up: 0
+    down: 0
 
-  - name: DIRECT
-    type: direct
-
+# 策略组
 proxy-groups:
-  - name: PROXY
+  - name: "🚀 节点选择"
     type: select
     proxies:
-      - 美国-Hysteria2
-      - DIRECT
+      - "🇺🇸 美国 Hysteria2"
+      - "DIRECT"
 
+# 规则 (对应原配置的 route)
 rules:
-  # DNS 劫持
-  - DOMAIN-SUFFIX,googleapis.cn,PROXY
+  # 1. 阻断 UDP 443 (QUIC)，对应原配置 reject udp 443
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
 
-  # 广告拦截
-  - GEOSITE,category-ads-all,REJECT
-
-  # CN 域名/国内网站走直连
-  - GEOSITE,cn,DIRECT
-
-  # 国内 IP 段走直连
-  - GEOIP,CN,DIRECT,no-resolve
-
-  # 屏蔽多播地址
+  # 2. 阻断多播/保留地址，对应原配置 reject ip_cidr 224.0.0.0/3 等
   - IP-CIDR,224.0.0.0/3,REJECT,no-resolve
   - IP-CIDR,ff00::/8,REJECT,no-resolve
 
-  # 默认走代理
-  - MATCH,PROXY
+  # 3. 广告拦截，对应 geosite:category-ads-all
+  - GEOSITE,category-ads-all,REJECT
+
+  # 4. 特殊规则: googleapis.cn 走代理
+  - DOMAIN-SUFFIX,googleapis.cn,🚀 节点选择
+
+  # 5. 国内流量直连，对应 geosite:cn 和 geoip:cn
+  - GEOSITE,cn,DIRECT
+  - GEOIP,cn,DIRECT
+
+  # 6. 剩余流量走代理
+  - MATCH,🚀 节点选择
