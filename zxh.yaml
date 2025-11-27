@@ -1,118 +1,88 @@
-# Clash Meta 配置文件
+# Clash Meta / Mihomo Configuration
 port: 7890
 socks-port: 7891
-mixed-port: 10808
+mixed-port: 2080 # 对应原配置 mixed-in 端口
 allow-lan: false
-bind-address: '*'
 mode: rule
-log-level: warning
-ipv6: true
+log-level: info
+ipv6: true # 原配置使用了 IPv6 服务器地址，必须开启
+
+# 外部控制配置（用于面板）
 external-controller: 127.0.0.1:9090
 
 # DNS 配置
 dns:
   enable: true
+  listen: 0.0.0.0:1053
   ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16 # 对应原配置 198.18.0.0/15 (Clash通常默认/16，兼容性更好)
+  fake-ip-filter:
+    - "*"
+    - "+.lan"
+    - "+.local"
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  fake-ip-filter:
-    - '*.lan'
-    - localhost.ptlogin2.qq.com
   nameserver:
-    - https://1.1.1.1/dns-query
-    - https://dns.cloudflare.com/dns-query
-  fallback:
-    - https://1.1.1.1/dns-query
-    - https://dns.google/dns-query
-  fallback-filter:
-    geoip: true
-    geoip-code: CN
-    ipcidr:
-      - 240.0.0.0/4
+    - https://dns.google/dns-query # 对应 dns-remote
   nameserver-policy:
-    'geosite:cn':
-      - https://doh.pub/dns-query
-      - https://dns.alidns.com/dns-query
-    'geosite:gfw,geolocation-!cn':
-      - https://dns.cloudflare.com/dns-query
-      - https://dns.google/dns-query
+    # 对应原配置 dns-direct (国内域名走阿里DoH)
+    "geosite:cn": https://223.5.5.5/dns-query
+
+# TUN 模式配置
+tun:
+  enable: true
+  stack: gvisor # 对应原配置 gvisor
+  auto-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+  mtu: 9000 # 对应原配置 MTU
 
 # 代理节点
 proxies:
-  - name: "hy2"
-    type: hysteria2
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    password: 3n5T8b9NhTZe5cm2NW
-    obfs: salamander
-    obfs-password: 96Jj12oLbwuEQOrZ39
-    sni: ipv6.zxh425.dpdns.org
-    skip-cert-verify: false
-    # alpn:
-    #   - h3
+  - name: "Proxy-Node"
+    type: vmess
+    server: 2001:2c0:100:415:17:cafe:110:1
+    port: 25803
+    uuid: 01f5273a-4bd7-427b-bdb4-0066690eb890
+    alterId: 0
+    cipher: auto
+    network: ws
+    ws-opts:
+      path: "/01f5273a-4bd7-427b-bdb4-0066690eb890-vm" # 注意：Websocket路径通常需要以 / 开头
+      headers:
+        Host: pull.free.video.10010.com
 
 # 代理组
 proxy-groups:
-  - name: "🚀 节点选择"
+  - name: "Proxy"
     type: select
     proxies:
-      - ♻️ 自动选择
-      - 🎯 全球直连
-      - hy2
-
-  - name: "♻️ 自动选择"
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    tolerance: 50
-    proxies:
-      - hy2
-
-  - name: "🎯 全球直连"
-    type: select
-    proxies:
+      - "Proxy-Node"
       - DIRECT
 
-  - name: "🛑 广告拦截"
-    type: select
-    proxies:
-      - REJECT
-      - DIRECT
-
-  - name: "🐟 漏网之鱼"
-    type: select
-    proxies:
-      - 🚀 节点选择
-      - 🎯 全球直连
-
-# 规则
+# 规则配置
 rules:
-  # Google 服务
-  - DOMAIN-SUFFIX,googleapis.cn,🚀 节点选择
-  - DOMAIN-SUFFIX,gstatic.com,🚀 节点选择
+  # 1. 阻断 UDP 443 (QUIC) - 对应原配置 reject udp/443
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
 
-  # 屏蔽 QUIC (UDP 443)
-  - AND,(NETWORK,UDP),(DST-PORT,443),REJECT
+  # 2. 拦截广告 - 对应 geosite:category-ads-all
+  - GEOSITE,category-ads-all,REJECT
 
-  # 局域网地址
-  - GEOIP,private,DIRECT,no-resolve
-  - GEOSITE,private,DIRECT
+  # 3. Google API CN 强制代理 - 对应 googleapis.cn
+  - DOMAIN-SUFFIX,googleapis.cn,Proxy
 
-  # 中国 DNS 服务器
-  - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
-  - IP-CIDR,223.6.6.6/32,DIRECT,no-resolve
-  - IP-CIDR,119.29.29.29/32,DIRECT,no-resolve
-  - IP-CIDR,1.12.12.12/32,DIRECT,no-resolve
-  - IP-CIDR,120.53.53.53/32,DIRECT,no-resolve
-  - IP-CIDR,114.114.114.114/32,DIRECT,no-resolve
-  - IP-CIDR,180.76.76.76/32,DIRECT,no-resolve
-
-  # 中国域名和 IP
+  # 4. 国内域名直连 - 对应 geosite:cn
   - GEOSITE,cn,DIRECT
+
+  # 5. 国内IP直连 - 对应 geoip:cn
   - GEOIP,cn,DIRECT
 
-  # 国际流量走代理
-  - MATCH,🐟 漏网之鱼
+  # 6. 局域网/组播IP拦截 - 对应原配置的 reject ip_cidr
+  - IP-CIDR,224.0.0.0/3,REJECT,no-resolve
+  - IP-CIDR6,ff00::/8,REJECT,no-resolve
+
+  # 7. 默认漏网之鱼走代理
+  - MATCH,Proxy
