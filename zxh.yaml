@@ -1,98 +1,148 @@
-# =============================
-# 基础设置
-# =============================
-mixed-port: 7890
-allow-lan: true
-bind-address: '*'
-mode: rule
-log-level: info
-ipv6: true
-
-external-controller: 127.0.0.1:9090
-
-# =============================
-# DNS 设置
-# =============================
-dns:
-  enable: true
-  ipv6: true
-  listen: :1053
-  default-nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
-  nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
-  fallback:
-    - https://1.0.0.1/dns-query
-    - https://8.8.4.4/dns-query
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-
-# =============================
-# 节点列表（你的两个节点）
-# =============================
 proxies:
-  - name: "VLESS-Front"
+  # 第一个节点 - VLESS
+  - name: "免流"
     type: vless
     server: 47.108.130.60
     port: 36279
     uuid: 1ee49836-23f4-4b60-8cc2-d879967b5423
-    network: ws
-    tls: false
     udp: true
+    tls: false
+    network: ws
     ws-opts:
-      path: "/"
+      path: /
       headers:
         Host: pull.free.video.10010.com
 
-  - name: "Hysteria2-Back"
+  # 第二个节点 - Hysteria2
+  - name: "hy2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
-    password: "9hT3m6FvRkS1e8PnL5"
-    obfs: salamander
-    obfs-password: "8dS6p4JtMwE3q7VkH2"
+    password: 9hT3m6FvRkS1e8PnL5
     sni: ipv6.zxh425.dpdns.org
     skip-cert-verify: true
-    udp: true
+    obfs: salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
 
-# =============================
-# 链式代理（VLESS → HY2）
-# =============================
-proxy-groups:
-  - name: "Chain-VLESS-HYSTERIA"
+  # 链式代理节点
+  - name: "链式代理-免流+hy2"
     type: relay
     proxies:
-      - "VLESS-Front"
-      - "Hysteria2-Back"
+      - 免流
+      - hy2
 
-  - name: Proxy
+proxy-groups:
+  # 主代理选择组
+  - name: "节点选择"
     type: select
     proxies:
-      - Chain-VLESS-HYSTERIA
-      - VLESS-Front
-      - Hysteria2-Back
+      - 链式代理-免流+hy2
+      - 免流
+      - hy2
       - DIRECT
 
-  - name: Domestic
+  # 自动选择组（根据延迟自动选择最快节点）
+  - name: "自动选择"
+    type: url-test
+    proxies:
+      - 链式代理-免流+hy2
+      - 免流
+      - hy2
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+
+  # 国外流量
+  - name: "国外流量"
+    type: select
+    proxies:
+      - 节点选择
+      - 链式代理-免流+hy2
+      - 免流
+      - hy2
+      - DIRECT
+
+  # 流媒体服务
+  - name: "流媒体"
+    type: select
+    proxies:
+      - 节点选择
+      - 链式代理-免流+hy2
+      - 免流
+      - hy2
+
+  # 电报消息
+  - name: "Telegram"
+    type: select
+    proxies:
+      - 节点选择
+      - 链式代理-免流+hy2
+      - 免流
+      - hy2
+
+  # 国内流量
+  - name: "国内流量"
     type: select
     proxies:
       - DIRECT
-      - Chain-VLESS-HYSTERIA
+      - 节点选择
 
-  - name: Final
+  # 漏网之鱼
+  - name: "漏网之鱼"
     type: select
     proxies:
-      - Proxy
+      - 节点选择
       - DIRECT
 
-# =============================
-# 规则（常用默认规则）
-# =============================
 rules:
-  - GEOIP,private,DIRECT
-  - GEOIP,CN,Domestic
+  # 局域网地址
   - DOMAIN-SUFFIX,local,DIRECT
-  - DOMAIN-SUFFIX,lan,DIRECT
-  - MATCH,Final
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT
+  - IP-CIDR,224.0.0.0/4,DIRECT
+  - IP-CIDR,fe80::/10,DIRECT
+
+  # Telegram
+  - DOMAIN-SUFFIX,t.me,Telegram
+  - DOMAIN-SUFFIX,tdesktop.com,Telegram
+  - DOMAIN-SUFFIX,telegra.ph,Telegram
+  - DOMAIN-SUFFIX,telegram.me,Telegram
+  - DOMAIN-SUFFIX,telegram.org,Telegram
+  - DOMAIN-SUFFIX,telesco.pe,Telegram
+  - IP-CIDR,91.108.4.0/22,Telegram
+  - IP-CIDR,91.108.8.0/22,Telegram
+  - IP-CIDR,91.108.12.0/22,Telegram
+  - IP-CIDR,91.108.16.0/22,Telegram
+  - IP-CIDR,91.108.56.0/22,Telegram
+  - IP-CIDR,149.154.160.0/20,Telegram
+
+  # 流媒体
+  - DOMAIN-SUFFIX,youtube.com,流媒体
+  - DOMAIN-SUFFIX,googlevideo.com,流媒体
+  - DOMAIN-SUFFIX,netflix.com,流媒体
+  - DOMAIN-SUFFIX,nflxvideo.net,流媒体
+  - DOMAIN-SUFFIX,hulu.com,流媒体
+  - DOMAIN-SUFFIX,disney.com,流媒体
+  - DOMAIN-SUFFIX,disneyplus.com,流媒体
+
+  # 国内网站
+  - DOMAIN-SUFFIX,cn,国内流量
+  - DOMAIN-KEYWORD,baidu,国内流量
+  - DOMAIN-KEYWORD,taobao,国内流量
+  - DOMAIN-KEYWORD,alipay,国内流量
+  - DOMAIN-SUFFIX,qq.com,国内流量
+  - DOMAIN-SUFFIX,weixin.qq.com,国内流量
+  - DOMAIN-SUFFIX,bilibili.com,国内流量
+  - GEOIP,CN,国内流量
+
+  # 国外流量
+  - DOMAIN-SUFFIX,google.com,国外流量
+  - DOMAIN-SUFFIX,facebook.com,国外流量
+  - DOMAIN-SUFFIX,twitter.com,国外流量
+  - DOMAIN-SUFFIX,instagram.com,国外流量
+  - DOMAIN-SUFFIX,github.com,国外流量
+
+  # 最终规则
+  - MATCH,漏网之鱼
