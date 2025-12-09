@@ -1,3 +1,79 @@
+# Clash Meta 完整配置文件
+# 更新时间: 2024-12-09
+
+# 混合端口配置
+mixed-port: 7890
+
+# HTTP 代理端口
+# port: 7890
+
+# SOCKS5 代理端口
+# socks-port: 7891
+
+# Linux 和 macOS 的透明代理端口
+# redir-port: 7892
+
+# 允许局域网连接
+allow-lan: true
+
+# 绑定IP地址，仅作用于 allow-lan 为 true
+# bind-address: "*"
+
+# Clash 路由工作模式
+# rule: 规则模式
+# global: 全局模式
+# direct: 直连模式
+mode: rule
+
+# 日志级别
+# silent: 静默
+# error: 错误
+# warning: 警告
+# info: 信息
+# debug: 调试
+log-level: info
+
+# 是否启用 IPv6
+ipv6: true
+
+# 外部控制器
+external-controller: 127.0.0.1:9090
+
+# 外部控制器密钥
+# secret: ""
+
+# RESTful API
+# external-ui: folder
+
+# 实验性功能
+experimental:
+  ignore-resolve-fail: true
+
+# DNS 配置
+dns:
+  enable: true
+  ipv6: true
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - localhost.ptlogin2.qq.com
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
 proxies:
   # 第一个节点 - VLESS
   - name: "免流"
