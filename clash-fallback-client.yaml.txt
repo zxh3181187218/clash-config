@@ -7,7 +7,7 @@
 proxy-providers:
 
   机场名称:
-    url: "机场订阅地址"  
+    url: "https://zxh3181187218.github.io/clash-config/config.yaml"  
     type: http
     interval: 86400
     health-check:
@@ -328,3 +328,4 @@ rule-providers:
 
 
 #  GateFireWall / Domain: {<<: *domain, url: "https://gh-proxy.com/github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/gfw.mrs"}
+
