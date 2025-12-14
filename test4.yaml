@@ -1,0 +1,126 @@
+# Clash Meta Android Config - "v2rayNG Logic"
+# 专治顽固 DNS 泄漏：强制单向解析
+
+port: 7890
+socks-port: 7891
+mixed-port: 7892
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false # 【强制关闭 IPv6】防止 IPv6 DNS 泄漏
+external-controller: 127.0.0.1:9090
+
+# --- TUN 模式 ---
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+
+# --- DNS 配置 (防泄漏核心) ---
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  respect-rules: true 
+  
+  # 【关键 1】默认 DNS (解析国外和未知网站)
+  # 既然 v2rayNG 不漏，我们就要学它：国外域名只问国外 DNS
+  # 这里的 8.8.8.8 会被下方的 rules 强制抓取进“德国隧道”
+  nameserver:
+    - 8.8.8.8
+    - 1.1.1.1
+
+  # 【关键 2】仅国内已知域名才走国内 DNS
+  nameserver-policy:
+    "geosite:cn,private":
+      - 223.5.5.5
+      - 119.29.29.29
+
+  # 【关键 3】彻底留空 Fallback
+  # 绝不允许 Clash 自己去乱试，防止“中国 DNS”抢答导致泄漏
+  fallback: []
+  
+  # 【关键 4】过滤杂音
+  # 防止 IP 属于中国但域名是国外的奇怪情况导致 DNS 抢答
+  fallback-filter:
+    geoip: true
+    ip-cidr:
+      - 240.0.0.0/4
+
+# --- 节点配置 ---
+proxies:
+  # 1. 德国出口 (15821) -> 解析国外 DNS 用
+  - name: "✈️ 德国 (成都中转)"
+    type: vmess
+    server: 47.108.130.60
+    port: 15821
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    udp: true
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  # 2. 成都出口 (49084) -> 解析国内 DNS 用
+  - name: "🏠 成都 (本地直连)"
+    type: vmess
+    server: 47.108.130.60
+    port: 49084
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    udp: true
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+# --- 策略组 ---
+proxy-groups:
+  - name: "🌍 国外流量"
+    type: select
+    proxies:
+      - "✈️ 德国 (成都中转)"
+
+  - name: "🇨🇳 国内流量"
+    type: select
+    proxies:
+      - "🏠 成都 (本地直连)"
+      - DIRECT
+
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "🌍 国外流量"
+      - "🇨🇳 国内流量"
+
+# --- 规则 ---
+rules:
+  # 1. 【劫持国外 DNS】
+  # 任何去访问 8.8.8.8 的请求，强制走德国隧道
+  # 这样你的 ISP 根本不知道你在查 DNS，泄漏测试站只能看到德国IP在查
+  - IP-CIDR,8.8.8.8/32,🌍 国外流量
+  - IP-CIDR,1.1.1.1/32,🌍 国外流量
+  
+  # 2. 【劫持国内 DNS】
+  # 任何去访问 223.5.5.5 的请求，强制走成都直连
+  - IP-CIDR,223.5.5.5/32,🇨🇳 国内流量
+  - IP-CIDR,119.29.29.29/32,🇨🇳 国内流量
+
+  # 3. 地区分流
+  - GEOSITE,cn,🇨🇳 国内流量
+  # 注意：这里我们保留 GEOIP CN，但因为上面的 DNS 策略，
+  # 只有当 nameserver (8.8.8.8) 解析出来的结果是中国IP时才会走这里。
+  # 因为 8.8.8.8 是通过德国口出去的，所以这不会导致 DNS 泄漏。
+  - GEOIP,cn,🇨🇳 国内流量
+  
+  # 4. 默认全走国外
+  - MATCH,🌍 国外流量
