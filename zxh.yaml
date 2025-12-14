@@ -1,0 +1,112 @@
+port: 7890
+socks-port: 7891
+mixed-port: 7892
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+external-controller: 127.0.0.1:9090
+
+# --- DNS 配置 (防泄漏核心) ---
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  # 推荐使用 fake-ip 模式以提高性能并避免部分 DNS 污染
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*"
+    - "+.lan"
+    - "+.local"
+  
+  # 默认 DNS (用于解析国外域名) - 使用加密 DoH
+  nameserver:
+    - https://8.8.8.8/dns-query
+    - https://1.1.1.1/dns-query
+    
+  # DNS 分流策略 (用于解析国内域名)
+  nameserver-policy:
+    "geosite:cn,private":
+      - https://223.5.5.5/dns-query
+      - https://119.29.29.29/dns-query
+
+# --- 嗅探配置 (准确识别流量) ---
+sniffer:
+  enable: true
+  parse-pure-ip: true
+  sniff:
+    tls:
+      ports: [443, 8443]
+    http:
+      ports: [80, 8080-8880]
+      override-destination: true
+
+# --- 代理节点列表 ---
+proxies:
+  - name: "德国🇩🇪免流"
+    type: vmess
+    server: 47.108.130.60
+    port: 15821
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "成都🇨🇳免流"
+    type: vmess
+    server: 47.108.130.60
+    port: 49084
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+# --- 策略组 (路由逻辑) ---
+proxy-groups:
+  # 1. 国外流量策略组 -> 默认选德国节点
+  - name: "🌍 国外流量"
+    type: select
+    proxies:
+      - "德国🇩🇪免流"
+      - "成都🇨🇳免流"
+
+  # 2. 国内流量策略组 -> 默认选成都节点
+  - name: "🇨🇳 国内流量"
+    type: select
+    proxies:
+      - "成都🇨🇳免流"
+      - "德国🇩🇪免流"
+      - DIRECT
+
+  # 3. 漏网之鱼 (兜底)
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "🌍 国外流量"
+      - "🇨🇳 国内流量"
+
+# --- 规则 (分流指令) ---
+rules:
+  # 拦截广告等 (可选，这里仅保留核心分流)
+  # - GEOSITE,category-ads-all,REJECT
+  
+  # --- 国内分流规则 ---
+  # 识别国内网站域名 -> 走国内分组
+  - GEOSITE,cn,🇨🇳 国内流量
+  # 识别国内应用 (微信、B站等) -> 走国内分组
+  - GEOSITE,private,🇨🇳 国内流量
+  # 识别国内 IP -> 走国内分组
+  - GEOIP,cn,🇨🇳 国内流量
+  
+  # --- 默认规则 ---
+  # 剩余所有流量 -> 走国外分组
+  - MATCH,🌍 国外流量
