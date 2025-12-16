@@ -1,0 +1,83 @@
+# Clash Meta (Mihomo) Configuration
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+external-controller: 127.0.0.1:9090
+
+# DNS 配置 (保持不变：全防泄漏 + 国外DNS)
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localhost"
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  respect-rules: true
+
+proxies:
+  - name: "德国"
+    type: vmess
+    server: 47.108.130.60
+    port: 15821
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "成都"
+    type: vmess
+    server: 47.108.130.60
+    port: 49084
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+proxy-groups:
+  # 策略组：国外流量 -> 仅使用德国
+  - name: "国外流量"
+    type: select
+    proxies:
+      - "德国"
+
+  # 策略组：国内流量 -> 仅使用成都
+  # 注意：这里删除了 DIRECT，意味着访问国内网站也会强制通过成都节点转发
+  # 这适合身在国外需要回国（使用国内IP）的场景
+  - name: "国内流量"
+    type: select
+    proxies:
+      - "成都"
+
+rules:
+  # 规则 1: 中国域名和IP -> 走国内流量组(即成都)
+  - GEOSITE,CN,国内流量
+  - GEOIP,CN,国内流量
+  
+  # 规则 2: 防止BT下载走代理 (可选，建议保留以节省流量)
+  - GEOSITE,Category-games@cn,国内流量
+  
+  # 规则 3: 剩余所有流量 -> 走国外流量组(即德国)
+  - MATCH,国外流量
