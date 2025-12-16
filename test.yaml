@@ -1,0 +1,77 @@
+mixed-port: 7890
+allow-lan: false
+bind-address: '*'
+mode: rule
+log-level: info
+external-controller: 127.0.0.1:9090
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+proxies:
+  - name: "æ\x88\x90é\x83½ð\x9F\x87¨ð\x9F\x87³å\N\x8Dæµ\x81"
+    type: vmess
+    server: 47.108.130.60
+    port: 49084
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: /
+      headers:
+        Host: pull.free.video.10010.com
+  - name: "å¾·å\x9B½ð\x9F\x87©ð\x9F\x87ªå\N\x8Dæµ\x81"
+    type: vmess
+    server: 47.108.130.60
+    port: 15821
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: /
+      headers:
+        Host: pull.free.video.10010.com
+proxy-groups:
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🎯 全球直连
+      - "æ\x88\x90é\x83½ð\x9F\x87¨ð\x9F\x87³å\N\x8Dæµ\x81"
+      - "å¾·å\x9B½ð\x9F\x87©ð\x9F\x87ªå\N\x8Dæµ\x81"
+  - name: ♻️ 自动选择
+    type: url-test
+    proxies:
+      - "æ\x88\x90é\x83½ð\x9F\x87¨ð\x9F\x87³å\N\x8Dæµ\x81"
+      - "å¾·å\x9B½ð\x9F\x87©ð\x9F\x87ªå\N\x8Dæµ\x81"
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+  - name: 🎯 全球直连
+    type: select
+    proxies:
+      - DIRECT
+  - name: 🛑 广告拦截
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+rules:
+  - DOMAIN-SUFFIX,local,🎯 全球直连
+  - IP-CIDR,127.0.0.0/8,🎯 全球直连
+  - IP-CIDR,172.16.0.0/12,🎯 全球直连
+  - IP-CIDR,192.168.0.0/16,🎯 全球直连
+  - IP-CIDR,10.0.0.0/8,🎯 全球直连
+  - IP-CIDR,100.64.0.0/10,🎯 全球直连
+  - GEOIP,CN,🎯 全球直连
+  - MATCH,🚀 节点选择
