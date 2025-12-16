@@ -1,0 +1,63 @@
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+external-controller: :9090
+
+# 1. 节点定义部分
+proxies:
+  # --- 节点 1: VMess (入口) ---
+  - name: "成都-VMess-中转"
+    type: vmess
+    server: 47.108.130.60
+    port: 49084
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    udp: true
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+    # 原链接未开启 TLS，此处保持关闭
+    tls: false 
+
+  # --- 节点 2: VLESS Reality (出口) ---
+  - name: "VLESS-Reality-落地"
+    type: vless
+    server: hy2.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
+# 2. 策略组定义部分 (链式代理核心)
+proxy-groups:
+  # 这是一个 Relay (中继) 组
+  - name: "⛓️ 链式代理 (VMess->VLESS)"
+    type: relay
+    proxies:
+      - "成都-VMess-中转"    # 第一跳：先连这个
+      - "VLESS-Reality-落地" # 第二跳：通过第一跳连这个
+
+  # 主选择组
+  - name: "🚀 节点选择"
+    type: select
+    proxies:
+      - "⛓️ 链式代理 (VMess->VLESS)"
+      - "成都-VMess-中转"
+      - "VLESS-Reality-落地"
+
+# 3. 规则部分 (简单的示例规则)
+rules:
+  - MATCH,🚀 节点选择
+  
