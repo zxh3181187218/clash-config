@@ -7,7 +7,7 @@ log-level: info
 ipv6: false
 external-controller: 127.0.0.1:9090
 
-# DNS 配置 (保持不变：全防泄漏 + 国外DNS)
+# DNS 配置
 dns:
   enable: true
   listen: 0.0.0.0:1053
@@ -16,15 +16,24 @@ dns:
   fake-ip-filter:
     - "*.lan"
     - "*.localhost"
+  
+  # 默认 DNS
   default-nameserver:
     - 1.1.1.1
     - 8.8.8.8
+  
+  # 核心 DNS (国外网站使用)
   nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
-  fallback:
+  
+  # 必须添加这一项来修复报错
+  # 用于解析代理节点域名的 DNS (虽然您的节点是IP，但开启 respect-rules 后必须填)
+  proxy-server-nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
+
+  # 开启后，DNS 解析也会匹配 rules 规则
   respect-rules: true
 
 proxies:
@@ -64,8 +73,6 @@ proxy-groups:
       - "德国"
 
   # 策略组：国内流量 -> 仅使用成都
-  # 注意：这里删除了 DIRECT，意味着访问国内网站也会强制通过成都节点转发
-  # 这适合身在国外需要回国（使用国内IP）的场景
   - name: "国内流量"
     type: select
     proxies:
@@ -76,8 +83,9 @@ rules:
   - GEOSITE,CN,国内流量
   - GEOIP,CN,国内流量
   
-  # 规则 2: 防止BT下载走代理 (可选，建议保留以节省流量)
+  # 规则 2: 防止BT下载走代理 (可选)
   - GEOSITE,Category-games@cn,国内流量
   
   # 规则 3: 剩余所有流量 -> 走国外流量组(即德国)
   - MATCH,国外流量
+  
