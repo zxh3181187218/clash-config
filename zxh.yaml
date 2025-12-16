@@ -1,0 +1,96 @@
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+external-controller: '127.0.0.1:9090'
+
+# --- 规则集源 (用于去广告) ---
+# Clash 会自动下载这个列表用于屏蔽广告
+rule-providers:
+  reject_list:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/reject.yaml
+    interval: 86400
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localhost"
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  respect-rules: true
+
+proxies:
+  - name: "德国"
+    type: vmess
+    server: 47.108.130.60
+    port: 15821
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "成都"
+    type: vmess
+    server: 47.108.130.60
+    port: 49084
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+proxy-groups:
+  - name: "国外流量"
+    type: select
+    proxies:
+      - "德国"
+
+  - name: "国内流量"
+    type: select
+    proxies:
+      - "成都"
+
+rules:
+  # 1. [去广告] 优先拦截广告域名 (网络层拦截)
+  - RULE-SET,reject_list,REJECT
+
+  # 2. [隐私] WebRTC 强力拦截 (防止真实IP暴露)
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
+  - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
+
+  # 3. [分流] 国内流量 (CN) -> 走成都节点
+  - GEOSITE,CN,国内流量
+  - GEOIP,CN,国内流量
+  - GEOSITE,Category-games@cn,国内流量
+  
+  # 4. [兜底] 其余所有流量 -> 走德国节点
+  - MATCH,国外流量
+  
