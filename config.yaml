@@ -69,10 +69,11 @@ proxy-groups:
       - "成都"
 
 rules:
-  # --- WebRTC 强力拦截 ---
-  # 直接拒绝所有 UDP 3478 端口的 STUN 流量
-  # 这是防止泄漏最彻底的方法
+  # --- WebRTC 强力拦截 (更新版) ---
+  # 拦截标准 STUN 端口 (3478)
   - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
+  # 拦截 Google 特有 STUN 端口 (19302) <--- 新增这条
+  - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
   
   # --- 分流规则 ---
   - GEOSITE,CN,国内流量
@@ -81,4 +82,3 @@ rules:
   
   # --- 兜底规则 ---
   - MATCH,国外流量
-  
