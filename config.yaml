@@ -32,7 +32,7 @@ dns:
 proxies:
   - name: "德国"
     type: vmess
-    server: 47.108.130.60
+    server: 47.
     port: 15821
     uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
     alterId: 0
@@ -46,7 +46,7 @@ proxies:
 
   - name: "成都"
     type: vmess
-    server: 47.108.130.60
+    server: 47
     port: 49084
     uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
     alterId: 0
