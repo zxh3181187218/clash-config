@@ -35,7 +35,7 @@ proxies:
   # 成都入口
   - name: "1️⃣ 成都-VMess"
     type: vmess
-    server: 47.108.130.69
+    server: 47.108.130.60
     port: 49084
     uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
     alterId: 0
