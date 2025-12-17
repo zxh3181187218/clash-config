@@ -1,0 +1,98 @@
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+external-controller: :9090
+
+# --- DNS 配置 (保留救急版，防止连不上网) ---
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  
+  # 引导 DNS (用于解析节点域名)，使用国内 DNS 确保握手成功
+  default-nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+    
+  # 实际查询 DNS (加密防劫持)
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+    
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+# --- 节点配置 ---
+proxies:
+  # 1. 节点一：成都 VMess (入口/中转)
+  - name: "1️⃣ 成都-VMess"
+    type: vmess
+    server: 47.108.130.60
+    port: 49084
+    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    alterId: 0
+    cipher: auto
+    udp: true
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+    tls: false 
+
+  # 2. 节点二：Hysteria2 (出口/落地) - [新替换]
+  # 对应链接: hy2://9hT3m6FvRkS1e8PnL5@hy2.zxh425.dpdns.org:443...
+  - name: "2️⃣ Hy2-Salamander-落地"
+    type: hysteria2
+    server: hy2.zxh425.dpdns.org
+    port: 443
+    password: 9hT3m6FvRkS1e8PnL5
+    sni: hy2.zxh425.dpdns.org
+    skip-cert-verify: true     # 对应 insecure=1
+    obfs: salamander           # 对应 obfs=salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
+    udp: true
+
+# --- 策略组配置 ---
+proxy-groups:
+  # [策略 A] 链式出国 (手机 -> 成都 -> Hy2 -> 目标)
+  - name: "✈️ 链式出国"
+    type: relay
+    proxies:
+      - "1️⃣ 成都-VMess"
+      - "2️⃣ Hy2-Salamander-落地"
+
+  # [策略 B] 国内流量 (手机 -> 成都 -> 目标)
+  - name: "🇨🇳 国内流量"
+    type: select
+    proxies:
+      - "1️⃣ 成都-VMess"
+      - "DIRECT" # 备用：万一成都挂了，手动切这个
+
+  # [策略 C] 总控
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "✈️ 链式出国"
+      - "1️⃣ 成都-VMess"
+
+# --- 规则配置 ---
+rules:
+  # 1. 保护系统连接
+  - GEOIP,private,DIRECT,no-resolve
+
+  # 2. 广告拦截
+  - GEOSITE,category-ads-all,REJECT
+  
+  # 3. 国内网站 -> 走成都
+  - GEOSITE,cn,🇨🇳 国内流量
+  - GEOIP,cn,🇨🇳 国内流量
+  
+  # 4. 国外网站 -> 走链式
+  - MATCH,🐟 漏网之鱼
+  
