@@ -5,10 +5,14 @@ mode: rule
 log-level: info
 external-controller: :9090
 
-# 1. 节点定义部分
+geodata-mode: true
+geox-url:
+  geoip: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat"
+  geosite: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat"
+
 proxies:
-  # --- 节点 1: VMess (入口) ---
-  - name: "成都-VMess-中转"
+  # --- 节点 1: VMess (成都入口) ---
+  - name: "1️⃣ 成都-VMess"
     type: vmess
     server: 47.108.130.60
     port: 49084
@@ -21,11 +25,10 @@ proxies:
       path: "/"
       headers:
         Host: pull.free.video.10010.com
-    # 原链接未开启 TLS，此处保持关闭
     tls: false 
 
-  # --- 节点 2: VLESS Reality (出口) ---
-  - name: "VLESS-Reality-落地"
+  # --- 节点 2: VLESS (国外落地) ---
+  - name: "2️⃣ VLESS-Vision-落地"
     type: vless
     server: hy2.zxh425.dpdns.org
     port: 443
@@ -40,24 +43,40 @@ proxies:
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
       short-id: f71dda44e6f4f3b7
 
-# 2. 策略组定义部分 (链式代理核心)
 proxy-groups:
-  # 这是一个 Relay (中继) 组
-  - name: "⛓️ 链式代理 (VMess->VLESS)"
+  # --- [策略 A] 国外流量链式 (成都 -> 美国/落地) ---
+  - name: "✈️ 链式出国"
     type: relay
     proxies:
-      - "成都-VMess-中转"    # 第一跳：先连这个
-      - "VLESS-Reality-落地" # 第二跳：通过第一跳连这个
+      - "1️⃣ 成都-VMess"
+      - "2️⃣ VLESS-Vision-落地"
 
-  # 主选择组
-  - name: "🚀 节点选择"
+  # --- [策略 B] 国内流量 (只走成都) ---
+  # 修改点：这里只保留了成都节点，去掉了 DIRECT
+  # 效果：访问百度/微信，数据包也会发给成都服务器
+  - name: "🇨🇳 国内流量"
     type: select
     proxies:
-      - "⛓️ 链式代理 (VMess->VLESS)"
-      - "成都-VMess-中转"
-      - "VLESS-Reality-落地"
+      - "1️⃣ 成都-VMess"
+      - "DIRECT" # 备用：万一成都炸了，手动选这个可以直连
 
-# 3. 规则部分 (简单的示例规则)
+  # --- [策略 C] 总控 ---
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "✈️ 链式出国"
+      - "1️⃣ 成都-VMess"
+
 rules:
-  - MATCH,🚀 节点选择
+  # 1. 广告拦截 (还是建议拦截)
+  - GEOSITE,category-ads-all,REJECT
   
+  # 2. 国内网站 -> 强制走“国内流量”组 (即走成都)
+  - GEOSITE,cn,🇨🇳 国内流量
+  - GEOIP,cn,🇨🇳 国内流量
+  
+  # 注意：GEOIP,private (局域网) 最好保留 DIRECT，否则你连不上自家路由器后台
+  - GEOIP,private,DIRECT
+
+  # 3. 国外网站 -> 走链式 (成都 -> 落地)
+  - MATCH,🐟 漏网之鱼
