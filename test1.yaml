@@ -5,16 +5,8 @@ mode: rule
 log-level: info
 external-controller: :9090
 
-# --- [修复核心] ---
-# 这里指定了下载 .metadb 后缀的文件，完美解决 "wire-format" 错误
-geodata-mode: true
-geox-url:
-  geoip: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.metadb"
-  geosite: "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat"
-# -----------------
-
 proxies:
-  # --- 节点 1: 成都入口 (VMess) ---
+  # --- 节点 1: 成都入口 ---
   - name: "1️⃣ 成都-VMess"
     type: vmess
     server: 47.108.130.60
@@ -30,7 +22,7 @@ proxies:
         Host: pull.free.video.10010.com
     tls: false 
 
-  # --- 节点 2: 国外落地 (VLESS Vision) ---
+  # --- 节点 2: 国外落地 ---
   - name: "2️⃣ VLESS-Vision-落地"
     type: vless
     server: hy2.zxh425.dpdns.org
@@ -47,25 +39,22 @@ proxies:
       short-id: f71dda44e6f4f3b7
 
 proxy-groups:
-  # --- [策略 A] 国外流量 (双重跳板) ---
-  # 路径：手机 -> 成都 -> 美国 -> 目标
+  # --- [策略 A] 链式出国 ---
   - name: "✈️ 链式出国"
     type: relay
     proxies:
       - "1️⃣ 成都-VMess"
       - "2️⃣ VLESS-Vision-落地"
 
-  # --- [策略 B] 国内流量 (单节点) ---
-  # 路径：手机 -> 成都 -> 目标
-  # 这里的默认值是成都节点，不再是直连
+  # --- [策略 B] 国内流量 ---
+  # 强制走成都节点
   - name: "🇨🇳 国内流量"
     type: select
     proxies:
       - "1️⃣ 成都-VMess"
       - "DIRECT" 
 
-  # --- [策略 C] 最终选择 ---
-  # 默认走链式出国
+  # --- [策略 C] 总控 ---
   - name: "🐟 漏网之鱼"
     type: select
     proxies:
@@ -73,16 +62,15 @@ proxy-groups:
       - "1️⃣ 成都-VMess"
 
 rules:
-  # 1. 保护手机系统连接 (必须保留 DIRECT)
-  # 这里的 private 指的是本地回环和运营商内网 IP，不影响你上网
-  - GEOIP,private,DIRECT
+  # 1. 保护系统连接
+  - GEOIP,private,DIRECT,no-resolve
 
-  # 2. 广告拦截 (可选)
+  # 2. 广告拦截
   - GEOSITE,category-ads-all,REJECT
   
-  # 3. 国内网站 -> 走 [国内流量] 组 -> (成都节点)
+  # 3. 国内网站 (使用标准 MMDB 格式)
   - GEOSITE,cn,🇨🇳 国内流量
   - GEOIP,cn,🇨🇳 国内流量
   
-  # 4. 其他所有 (国外) -> 走 [漏网之鱼] 组 -> (链式代理)
+  # 4. 国外流量
   - MATCH,🐟 漏网之鱼
