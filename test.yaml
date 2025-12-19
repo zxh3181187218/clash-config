@@ -5,16 +5,28 @@ mode: rule
 log-level: info
 external-controller: :9090
 
-# DNS 配置：使用 Fake-IP 模式，防止本地 DNS 泄露
-# 因为全走代理，本地不需要解析真实 IP，全交给远端解析
+# --- DNS 设置 (严格模式) ---
 dns:
   enable: true
   listen: 0.0.0.0:53
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
+  
+  # 1. 严格只配置 Cloudflare 和 Google
   nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+    - 1.1.1.1
+    - 1.0.0.1
+    - 8.8.8.8
+    - 8.8.4.4
+    # 添加 DoH 以防止普通 UDP 53 被防火墙干扰
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  
+  # 2. 禁用 fallback (不允许使用其他 DNS)
+  fallback: []
+  
+  # 3. 确保 DNS 查询也走代理规则
+  respect-rules: true
 
 proxies:
   # --- 节点 1: 成都入口 ---
@@ -34,7 +46,7 @@ proxies:
   # --- 节点 2: 美国出口 ---
   - name: "2_美国落地"
     type: vless
-    server: hy2.zxh425.dpdns.org
+    server: ipv6.zxh425.dpdns.org
     port: 443
     uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     network: tcp
@@ -48,28 +60,39 @@ proxies:
       short-id: f71dda44e6f4f3b7
 
 proxy-groups:
-  # --- 策略组 1: 国外流量 (强制链式) ---
-  # 路径: 本地 -> 成都 -> 美国
+  # --- 策略组 1: 国外流量 (链式: 本地->成都->美国) ---
   - name: "✈️ 国外流量"
     type: relay
     proxies:
       - "1_成都中转"
       - "2_美国落地"
 
-  # --- 策略组 2: 国内流量 (强制中转) ---
-  # 路径: 本地 -> 成都
-  # 这里虽然叫 select，但只放了一个节点，所以是强制的
+  # --- 策略组 2: 国内流量 (中转: 本地->成都) ---
   - name: "🏠 国内流量"
     type: select
     proxies:
       - "1_成都中转"
 
 rules:
-  # 1. 拦截国内域名 -> 强制走成都节点
-  - GEOSITE,CN,🏠 国内流量
+  # --- 安全与防泄露规则 ---
   
-  # 2. 拦截国内 IP -> 强制走成都节点
+  # 1. 【核心】防止 WebRTC 泄露：阻断 STUN 协议
+  # 大多数 WebRTC 依赖 UDP 3478 端口获取真实 IP，直接拒绝连接可强制 WebRTC 失败或回退
+  - DST-PORT,3478/udp,REJECT
+  
+  # 2. DNS 流量引导
+  # 强制 1.1.1.1 和 8.8.8.8 走成都节点 (比走美国更快，且能避开本地污染)
+  - IP-CIDR,1.1.1.1/32,🏠 国内流量
+  - IP-CIDR,1.0.0.1/32,🏠 国内流量
+  - IP-CIDR,8.8.8.8/32,🏠 国内流量
+  - IP-CIDR,8.8.4.4/32,🏠 国内流量
+
+  # --- 分流逻辑 ---
+  
+  # 3. 国内网站 -> 走成都
+  - GEOSITE,CN,🏠 国内流量
   - GEOIP,CN,🏠 国内流量
   
-  # 3. 剩余所有流量 (即国外) -> 强制走链式 (成都->美国)
+  # 4. 剩余所有(国外) -> 走成都-美国链式
   - MATCH,✈️ 国外流量
+  
