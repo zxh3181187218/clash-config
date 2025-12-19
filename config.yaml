@@ -32,7 +32,7 @@ dns:
 proxies:
   - name: "德国"
     type: vless
-    server: 47.108.130.60
+    server: 47.
     port: 51398
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     cipher: auto
@@ -45,7 +45,7 @@ proxies:
 
   - name: "成都"
     type: vmess
-    server: 47.108.130.60
+    server: 
     port: 25477
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     alterId: 0
