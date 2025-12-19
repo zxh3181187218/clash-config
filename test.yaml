@@ -52,7 +52,7 @@ proxies:
   # --- 节点 2: 美国出口 ---
   - name: "2_美国落地"
     type: vless
-    server: ipv6.zxh425.dpdns.org
+    server: hy2.zxh425.dpdns.org
     port: 443
     uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     network: tcp
