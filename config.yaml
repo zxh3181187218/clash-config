@@ -1,4 +1,4 @@
-port: 7890
+Port: 7890
 socks-port: 7891
 allow-lan: true
 mode: rule
@@ -31,11 +31,10 @@ dns:
 
 proxies:
   - name: "德国"
-    type: vmess
-    server: 47.
-    port: 15821
-    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
-    alterId: 0
+    type: vless
+    server: 47.108.130.60
+    port: 51398
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     cipher: auto
     network: ws
     tls: false
@@ -46,9 +45,9 @@ proxies:
 
   - name: "成都"
     type: vmess
-    server: 47
-    port: 49084
-    uuid: 4b64ce4d-72d5-463b-acba-90773c064ab8
+    server: 47.108.130.60
+    port: 25477
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     alterId: 0
     cipher: auto
     network: ws
