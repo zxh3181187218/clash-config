@@ -38,7 +38,7 @@ proxies:
   # --- 节点 1: 成都入口 ---
   - name: "1_成都中转"
     type: vmess
-    server: 47.108.130.65
+    server: 47.108.130.60
     port: 25477
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     alterId: 0
