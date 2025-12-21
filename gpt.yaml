@@ -11,7 +11,7 @@ log-level: info
 proxies:
   - name: "Chengdu"
     type: vmess
-    server: 47.108.130.60
+    server: cnm.com
     port: 25477
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     alterId: 0
@@ -26,7 +26,7 @@ proxies:
 
   - name: "Germany"
     type: vless
-    server: 47.108.130.60
+    server: cnm.cn
     port: 51398
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     encryption: none
