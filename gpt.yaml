@@ -1,0 +1,110 @@
+# Clash Meta config generated for you
+# - Chinese sites/apps -> Chengdu (vmess)
+# - Foreign sites/apps -> Germany (vless)
+# - DNS: DoH + fake-ip to reduce DNS leaks
+# - TUN enabled to reduce WebRTC leakage (not absolute guarantee)
+
+port: 7890
+socks-port: 7891
+redir-port: 7892
+tproxy-port: 7893
+allow-lan: false
+bind-address: "0.0.0.0"
+authentication:
+  - "": ""
+mode: rule
+log-level: info
+
+proxies:
+  - name: "Chengdu"
+    type: vmess
+    server: 47.108.130.60
+    port: 25477
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    alterId: 0
+    cipher: auto
+    udp: true
+    tls: false
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "Germany"
+    type: vless
+    server: 47.108.130.60
+    port: 51398
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    encryption: none
+    udp: true
+    tls: false
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+proxy-groups:
+  - name: "Proxy"          # quick-switch group for UI (you can choose one)
+    type: select
+    proxies:
+      - "Chengdu"
+      - "Germany"
+
+dns:
+  enable: true
+  ipv6: false
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip          # fake-ip helps avoid DNS leaks on Android
+  fake-ip-range: 198.18.0.1/16    # Clash 常用的 fake-ip 网段
+  use-hosts: true
+  nameserver:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+  fallback:
+    - 8.8.8.8
+    - 1.1.1.1
+
+tun:
+  enable: true
+  stack: gvisor        # 在 Android 上常用 gvisor / system（按你设备和 Clash 版本选择）
+  dns-hijack:
+    - 198.18.0.1:53    # 劫持 DNS 到 fake-ip
+  auto-route: true
+  auto-detect-interface: true
+  # 注意：TUN 需要系统权限，Clash for Android 会提示你授权 VPN 权限
+
+rules:
+  # 常见直连 & 本地网络
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - DOMAIN-SUFFIX,local,DIRECT
+
+  # 强制：任何属于中国 IP（geoip）走 Chengdu
+  - GEOIP,CN,Chengdu
+
+  # 常见中国域名后缀 -> Chengdu（补充一些常见后缀）
+  - DOMAIN-SUFFIX,cn,Chengdu
+  - DOMAIN-SUFFIX,com.cn,Chengdu
+  - DOMAIN-SUFFIX,gov.cn,Chengdu
+  - DOMAIN-SUFFIX,edu.cn,Chengdu
+  - DOMAIN-SUFFIX,org.cn,Chengdu
+  - DOMAIN-SUFFIX,net.cn,Chengdu
+
+  # 特殊常见中国站点关键词（提高命中率）
+  - DOMAIN-KEYWORD,baidu,Chengdu
+  - DOMAIN-KEYWORD,weibo,Chengdu
+  - DOMAIN-KEYWORD,qq,Chengdu
+  - DOMAIN-KEYWORD,ali,Chengdu
+  - DOMAIN-KEYWORD,taobao,Chengdu
+
+  # 防止直接访问已知 STUN 服务（减少 WebRTC 直连风险）
+  # （这些条目为通用示例；如发现具体 STUN 服务可增加条目）
+  - DOMAIN-KEYWORD,stun,Chengdu
+  - DOMAIN-KEYWORD,turn,Chengdu
+
+  # 其他全部流量 -> Germany（即非中国流量走德国节点）
+  - MATCH,Germany
