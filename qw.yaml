@@ -17,7 +17,7 @@ dns:
   listen: 0.0.0.0:53
   enhanced-mode: redir-host
   nameserver:
-    - 114.114.114.114
+    - 1.1.1.1
     - 8.8.8.8
   fallback:
     - tcp://1.1.1.1
@@ -70,6 +70,6 @@ proxy-groups:
 # 规则配置（关键分流设置）
 rules:
   # 中国IP直连（使用成都节点）
-  - GEOIP, CN, 成都节点
+  - GEOIP, CN, gn
   # 匹配所有其他流量
   - MATCH, gw
