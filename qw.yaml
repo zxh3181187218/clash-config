@@ -70,6 +70,7 @@ proxy-groups:
 # 规则配置（关键分流设置）
 rules:
   # 中国IP直连（使用成都节点）
+  - GEOSITE, CN,gn
   - GEOIP, CN, gn
   # 匹配所有其他流量
   - MATCH, gw
