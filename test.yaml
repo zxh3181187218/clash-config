@@ -1,0 +1,94 @@
+port: 7890
+socks-port: 7891
+redir-port: 7892
+allow-lan: true
+mode: Rule
+log-level: info
+ipv6: false
+
+# 外部控制器
+external-controller: '0.0.0.0:9090'
+# 【修改】务必修改此密码
+secret: 'ChangeThisToRealPassword123!' 
+
+# 【核心修改】DNS 分流配置 (推荐使用 fake-ip)
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  # 推荐使用 fake-ip，反应速度更快，且能解决部分 DNS 污染
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  # 这里填写国内 DNS，用于解析国内域名，速度快
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  # 当规则匹配到国外域名时，使用 fallback 解析
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  # 配置 fallback 过滤，防止国内域名被 fallback 解析成国外 IP
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
+  # 默认解析
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+proxies:
+  # 注意：请确认这里的 IP 是否真的正确。两个节点 IP 相同非常可疑。
+  - name: "成都节点-直连"
+    type: vmess
+    server: 47.108.130.60
+    port: 25477
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    alterId: 0
+    cipher: auto
+    network: ws
+    ws-path: /
+    ws-headers:
+      host: pull.free.video.10010.com
+    tls: false
+    # 既然是免流配置，headers 必须匹配，这里保留原样
+    sni: pull.free.video.10010.com
+    skip-cert-verify: true
+    udp: true
+
+  - name: "德国节点-代理"
+    type: vless
+    server: 47.108.130.60
+    port: 51398
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    network: ws
+    ws-path: /
+    ws-headers:
+      host: pull.free.video.10010.com
+    tls: false
+    sni: pull.free.video.10010.com
+    skip-cert-verify: true
+    udp: true
+
+proxy-groups:
+  # 改个直观的名字
+  - name: Domestic
+    type: select
+    proxies:
+      - DIRECT
+      - 成都节点-直连
+
+  - name: Proxy
+    type: select
+    proxies:
+      - 德国节点-代理
+
+rules:
+  # 优先匹配国内流量，直连或走国内中转
+  # 注意：如果你不是 Clash Meta 内核，请删除 GEOSITE 规则
+  - GEOSITE, CN, Domestic
+  - GEOIP, CN, Domestic
+  - GEOIP, PRIVATE, DIRECT
+  
+  # 兜底规则：其余流量全部走代理
+  - MATCH, Proxy
+  
