@@ -1,0 +1,105 @@
+# 代理节点定义
+proxies:
+  # 成都节点（中国境内专用）
+  - name: "成都节点"
+    type: vless
+    server: 47.108.130.60
+    port: 51398
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    network: ws
+    ws-path: "/"
+    ws-headers:
+      Host: pull.free.video.10010.com
+    skip-cert-verify: true
+
+  # 德国节点（境外专用）
+  - name: "德国节点"
+    type: vmess
+    server: 47.108.130.60
+    port: 25477
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    alterId: 0
+    cipher: auto
+    network: ws
+    ws-path: "/"
+    ws-headers:
+      Host: pull.free.video.10010.com
+    skip-cert-verify: true
+
+# 规则集配置
+rules:
+  # 中国境内流量规则
+  - GEOIP, cn, 成都节点
+  - DOMAIN-SUFFIX, 10010.com, 成都节点
+  - DOMAIN-SUFFIX, cmcc.com, 成都节点
+  - DOMAIN-SUFFIX, ctc.com, 成都节点
+  - DOMAIN-SUFFIX, alibaba.com, 成都节点
+  - DOMAIN-SUFFIX, baidu.com, 成都节点
+  - DOMAIN-SUFFIX, qq.com, 成都节点
+  - DOMAIN-SUFFIX, weixin.com, 成都节点
+  - DOMAIN-SUFFIX, sina.com, 成都节点
+  - DOMAIN-SUFFIX, 163.com, 成都节点
+
+  # 境外流量规则
+  - GEOIP, !cn, 德国节点
+  - DOMAIN-SUFFIX, google.com, 德国节点
+  - DOMAIN-SUFFIX, facebook.com, 德国节点
+  - DOMAIN-SUFFIX, twitter.com, 德国节点
+  - DOMAIN-SUFFIX, youtube.com, 德国节点
+  - DOMAIN-SUFFIX, netflix.com, 德国节点
+  - DOMAIN-SUFFIX, amazon.com, 德国节点
+  - DOMAIN-SUFFIX, microsoft.com, 德国节点
+  - DOMAIN-SUFFIX, apple.com, 德国节点
+  - DOMAIN-SUFFIX, wikipedia.org, 德国节点
+
+  # 默认规则
+  - MATCH, 德国节点
+
+# DNS高级配置（防泄漏核心）
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: false
+  default-nameserver: [8.8.8.8, 1.1.1.1]
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.10010.com"
+    - "*.cmcc.com"
+    - "*.ctc.com"
+    - "*.alibaba.com"
+    - "*.baidu.com"
+    - "*.qq.com"
+    - "*.weixin.com"
+    - "*.sina.com"
+    - "*.163.com"
+  nameserver:
+    - https://cloudflare-dns.com/dns-query#cn
+    - https://dns.google/dns-query
+  fallback:
+    - tls://1.1.1.1:853
+    - tls://8.8.8.8:853
+  fallback-filter:
+    geoip: cn
+
+# 代理组配置
+proxy-groups:
+  - name: "自动选择"
+    type: select
+    proxies:
+      - 成都节点
+      - 德国节点
+
+# 全局设置
+tun:
+  enable: true
+  stack: system
+  dns-hijack:
+    - 0.0.0.0:53
+  auto-route: true
+  auto-detect-interface: true
+
+# 防WebRTC泄漏关键设置
+redir-host: true
+allow-lan: false
+external-controller: 0.0.0.0:9090
