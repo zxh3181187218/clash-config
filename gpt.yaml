@@ -1,4 +1,6 @@
-# 端口设置
+# ---------------------------------------------------
+# 基础设置
+# ---------------------------------------------------
 mixed-port: 7890
 allow-lan: true
 mode: rule
@@ -6,33 +8,20 @@ log-level: info
 ipv6: false
 external-controller: 127.0.0.1:9090
 
-# DNS 设置 (推荐配置，防止 DNS 泄露)
 dns:
   enable: true
   listen: 0.0.0.0:1053
-  ipv6: false
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  default-nameserver:
+  nameserver:
     - 223.5.5.5
     - 119.29.29.29
-  nameserver:
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
-  fallback:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
-  fallback-filter:
-    geoip: true
-    ipcidr:
-      - 240.0.0.0/4
 
 # ---------------------------------------------------
-# 节点定义区域
+# 节点区域 (关键修改)
 # ---------------------------------------------------
 proxies:
-  # 1. 成都节点 (作为入口)
-  # 注意：必须开启 UDP，因为 Hy2 是 UDP 协议
+  # 1. 成都节点 (入口)
   - name: "🇨🇳 成都 (入口)"
     type: vmess
     server: 47.108.130.60
@@ -41,61 +30,47 @@ proxies:
     alterId: 0
     cipher: auto
     network: ws
-    udp: true  
+    udp: true                # 必须开启
+    packet-encoding: xudp    # [关键修改] 强制使用 XUDP 封装以支持 Hy2 穿透
     ws-opts:
       path: "/"
       headers:
         Host: pull.free.video.10010.com
 
-  # 2. 美国 Hy2 节点 (作为出口)
+  # 2. 美国 Hy2 节点 (出口)
   - name: "🇺🇸 美国 Hy2 (出口)"
     type: hysteria2
-    server: hy2.zxh425.dpdns.org
+    # [关键修改] 请将下方的域名改为该域名的真实 IP 地址！
+    # 原因：成都服务器可能无法解析这个域名。
+    # 你可以在电脑上 ping hy2.zxh425.dpdns.org 获得 IP。
+    # 如果实在找不到 IP，先保留域名试试，但极大几率失败。
+    server: 104.223.33.224
     port: 443
     password: "9hT3m6FvRkS1e8PnL5"
-    sni: hy2.zxh425.dpdns.org
+    sni: hy2.zxh425.dpdns.org # 这里的域名必须保留，用于验证
     obfs: salamander
     obfs-password: "8dS6p4JtMwE3q7VkH2"
     skip-cert-verify: true
+    fingerprint: chrome       # [建议] 模拟浏览器指纹
 
 # ---------------------------------------------------
-# 代理组定义区域 (链式代理逻辑)
+# 链式代理组
 # ---------------------------------------------------
 proxy-groups:
-  # 策略组 1: 主选择器
   - name: "🚀 节点选择"
     type: select
     proxies:
-      - "🔗 链式代理(成都->美国)"
+      - "🔗 链式中转"
       - "🇨🇳 成都 (入口)"
-      - "🇺🇸 美国 Hy2 (出口)"
       - DIRECT
 
-  # 策略组 2: 链式代理核心逻辑 (Relay)
-  # 流量走向：手机 -> 成都 -> 美国 -> 目标网站
-  - name: "🔗 链式代理(成都->美国)"
+  # 链式逻辑：流量 -> 成都 -> 美国 -> 目标
+  - name: "🔗 链式中转"
     type: relay
     proxies:
       - "🇨🇳 成都 (入口)"
       - "🇺🇸 美国 Hy2 (出口)"
 
-  # 策略组 3: 漏网之鱼
-  - name: "🐟 漏网之鱼"
-    type: select
-    proxies:
-      - "🚀 节点选择"
-      - DIRECT
-
-# ---------------------------------------------------
-# 分流规则
-# ---------------------------------------------------
 rules:
-  # 局域网和私有地址直连
-  - GEOIP,PRIVATE,DIRECT,no-resolve
-  
-  # 常见的中国应用直连
-  - GEOSITE,CN,DIRECT
   - GEOIP,CN,DIRECT
-  
-  # 剩下的流量全部走代理
   - MATCH,🚀 节点选择
