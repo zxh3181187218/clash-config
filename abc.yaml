@@ -1,0 +1,96 @@
+# --- 基础设置 ---
+port: 7890                # HTTP 代理端口
+socks-port: 7891          # SOCKS5 代理端口
+mixed-port: 7892          # 混合端口 (HTTP+SOCKS5)
+allow-lan: true           # 允许局域网连接
+mode: rule                # 规则模式
+log-level: info           # 日志级别
+ipv6: true                # 开启 IPv6 支持 (你的VLESS节点需要)
+external-controller: 0.0.0.0:9090 # 面板控制端口
+
+# --- DNS 设置 (推荐配置) ---
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: true              # DNS 解析支持 IPv6
+  default-nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+  enhanced-mode: fake-ip  # Fake-IP 模式，兼容性较好
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+# --- 节点列表 ---
+proxies:
+  # 1. 入口节点 (VLESS) - 你的本地先连它
+  - name: "1-前置-Vless"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
+  # 2. 出口节点 (Socks5) - 最终访问目标网站的 IP
+  - name: "2-落地-Socks5"
+    type: socks5
+    server: proxy.ipipgo.com
+    port: 31212
+    username: "customer-18b9b6"
+    password: "cb7b0350"
+
+# --- 代理组策略 ---
+proxy-groups:
+  # 策略组 1: 手动选择
+  - name: "🚀 节点选择"
+    type: select
+    proxies:
+      - "🔗 链式代理"    # 默认选这个
+      - "1-前置-Vless"   # 也可以单独用前置测试
+      - "2-落地-Socks5"  # 也可以单独用落地测试 (如果直连能通的话)
+      - "DIRECT"
+
+  # 策略组 2: 链式逻辑 (Relay)
+  # 流量走向: 你的设备 -> 1-前置-Vless -> 2-落地-Socks5 -> 目标网站
+  - name: "🔗 链式代理"
+    type: relay
+    proxies:
+      - "1-前置-Vless"
+      - "2-落地-Socks5"
+
+  # 策略组 3: 漏网之鱼
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "DIRECT"
+
+# --- 分流规则 ---
+rules:
+  # 必须直连的规则 (防止代理回环)
+  - DOMAIN,ipv6.zxh425.dpdns.org,DIRECT
+  - DOMAIN,proxy.ipipgo.com,DIRECT
+  
+  # 局域网和私有地址直连
+  - GEOIP,PRIVATE,DIRECT,no-resolve
+  - GEOIP,LAN,DIRECT,no-resolve
+  
+  # 中国大陆流量直连
+  - GEOIP,CN,DIRECT
+  - GEOSITE,CN,DIRECT
+  
+  # 剩下的流量走代理
+  - MATCH,🐟 漏网之鱼
+  
