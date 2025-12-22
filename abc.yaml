@@ -30,7 +30,7 @@ proxies:
   # 1. 入口节点 (VLESS) - 你的本地先连它
   - name: "1-前置-Vless"
     type: vless
-    server: ipv6.zxh425.dpdns.org
+    server: hy2.zxh425.dpdns.org
     port: 443
     uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     network: tcp
