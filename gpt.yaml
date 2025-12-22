@@ -1,97 +1,101 @@
-# Clash Meta config — 修正版
-port: 7890
-socks-port: 7891
-redir-port: 7892
-tproxy-port: 7893
-allow-lan: false
-bind-address: "0.0.0.0"
+# 端口设置
+mixed-port: 7890
+allow-lan: true
 mode: rule
 log-level: info
+ipv6: false
+external-controller: 127.0.0.1:9090
 
+# DNS 设置 (推荐配置，防止 DNS 泄露)
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
+
+# ---------------------------------------------------
+# 节点定义区域
+# ---------------------------------------------------
 proxies:
-  - name: "Chengdu"
+  # 1. 成都节点 (作为入口)
+  # 注意：必须开启 UDP，因为 Hy2 是 UDP 协议
+  - name: "🇨🇳 成都 (入口)"
     type: vmess
-    server: cnm.com
+    server: 47.108.130.60
     port: 25477
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     alterId: 0
     cipher: auto
-    udp: true
-    tls: false
     network: ws
+    udp: true  
     ws-opts:
       path: "/"
       headers:
         Host: pull.free.video.10010.com
 
-  - name: "Germany"
-    type: vless
-    server: cnm.cn
-    port: 51398
-    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
-    encryption: none
-    udp: true
-    tls: false
-    network: ws
-    ws-opts:
-      path: "/"
-      headers:
-        Host: pull.free.video.10010.com
+  # 2. 美国 Hy2 节点 (作为出口)
+  - name: "🇺🇸 美国 Hy2 (出口)"
+    type: hysteria2
+    server: hy2.zxh425.dpdns.org
+    port: 443
+    password: "9hT3m6FvRkS1e8PnL5"
+    sni: hy2.zxh425.dpdns.org
+    obfs: salamander
+    obfs-password: "8dS6p4JtMwE3q7VkH2"
+    skip-cert-verify: true
 
+# ---------------------------------------------------
+# 代理组定义区域 (链式代理逻辑)
+# ---------------------------------------------------
 proxy-groups:
-  - name: "Proxy"
+  # 策略组 1: 主选择器
+  - name: "🚀 节点选择"
     type: select
     proxies:
-      - "Chengdu"
-      - "Germany"
+      - "🔗 链式代理(成都->美国)"
+      - "🇨🇳 成都 (入口)"
+      - "🇺🇸 美国 Hy2 (出口)"
+      - DIRECT
 
-dns:
-  enable: true
-  ipv6: false
-  listen: 0.0.0.0:53
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  use-hosts: true
-  nameserver:
-    - https://dns.google/dns-query
-    - https://cloudflare-dns.com/dns-query
-  fallback:
-    - 8.8.8.8
-    - 1.1.1.1
+  # 策略组 2: 链式代理核心逻辑 (Relay)
+  # 流量走向：手机 -> 成都 -> 美国 -> 目标网站
+  - name: "🔗 链式代理(成都->美国)"
+    type: relay
+    proxies:
+      - "🇨🇳 成都 (入口)"
+      - "🇺🇸 美国 Hy2 (出口)"
 
-tun:
-  enable: true
-  stack: gvisor
-  dns-hijack:
-    - 198.18.0.1:53
-  auto-route: true
-  auto-detect-interface: true
+  # 策略组 3: 漏网之鱼
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - DIRECT
 
+# ---------------------------------------------------
+# 分流规则
+# ---------------------------------------------------
 rules:
-  - IP-CIDR,127.0.0.0/8,DIRECT
-  - IP-CIDR,10.0.0.0/8,DIRECT
-  - IP-CIDR,172.16.0.0/12,DIRECT
-  - IP-CIDR,192.168.0.0/16,DIRECT
-  - DOMAIN-SUFFIX,local,DIRECT
-
-  # 中国流量走成都节点
-  - GEOIP,CN,Chengdu
-  - DOMAIN-SUFFIX,cn,Chengdu
-  - DOMAIN-SUFFIX,com.cn,Chengdu
-  - DOMAIN-SUFFIX,gov.cn,Chengdu
-  - DOMAIN-SUFFIX,edu.cn,Chengdu
-  - DOMAIN-SUFFIX,org.cn,Chengdu
-  - DOMAIN-SUFFIX,net.cn,Chengdu
-
-  - DOMAIN-KEYWORD,baidu,Chengdu
-  - DOMAIN-KEYWORD,weibo,Chengdu
-  - DOMAIN-KEYWORD,qq,Chengdu
-  - DOMAIN-KEYWORD,ali,Chengdu
-  - DOMAIN-KEYWORD,taobao,Chengdu
-
-  # 尽量拦截 STUN/TURN 域名以减少 WebRTC 直连
-  - DOMAIN-KEYWORD,stun,Chengdu
-  - DOMAIN-KEYWORD,turn,Chengdu
-
-  # 其他全部走德国节点
-  - MATCH,Germany
+  # 局域网和私有地址直连
+  - GEOIP,PRIVATE,DIRECT,no-resolve
+  
+  # 常见的中国应用直连
+  - GEOSITE,CN,DIRECT
+  - GEOIP,CN,DIRECT
+  
+  # 剩下的流量全部走代理
+  - MATCH,🚀 节点选择
