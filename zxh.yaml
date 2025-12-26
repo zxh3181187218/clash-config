@@ -1,0 +1,124 @@
+# --- 基础设置 ---
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: true
+external-controller: 127.0.0.1:9090
+
+# --- DNS 设置 (纯净隐私 / 抗污染) ---
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  ipv6: true
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback:
+    - 1.1.1.1
+    - 8.8.8.8
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
+
+# --- 节点列表 ---
+proxies:
+  # [1] 海外主力：德国 VLESS (IPv4)
+  - name: "🇩🇪 德国 VLESS"
+    type: vless
+    server: 47.108.130.60
+    port: 51398
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    network: ws
+    tls: false
+    udp: true
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  # [2] 海外备用：Hy2 (IPv6)
+  - name: "🚀 Hy2 备用"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 9hT3m6FvRkS1e8PnL5
+    sni: ipv6.zxh425.dpdns.org
+    obfs: salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
+    skip-cert-verify: true
+
+  # [3] 海外兜底：Vision (IPv6)
+  - name: "☁️ VLESS Vision"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
+  # [4] 国内专线：成都 VMess
+  - name: "🇨🇳 国内专线 (成都)"
+    type: vmess
+    server: 47.108.130.60
+    port: 25477
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    alterId: 0
+    cipher: auto
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+# --- 策略组 ---
+proxy-groups:
+  # 1. 海外流量组 (Fallback: 德国->Hy2->Vision)
+  - name: "🛡️ 海外自动代理"
+    type: fallback
+    proxies:
+      - "🇩🇪 德国 VLESS"
+      - "🚀 Hy2 备用"
+      - "☁️ VLESS Vision"
+    url: 'http://www.gstatic.com/generate_204'
+    interval: 300
+
+  # 2. 国内流量组 (指定走成都)
+  - name: "🇨🇳 国内代理"
+    type: select
+    proxies:
+      - "🇨🇳 国内专线 (成都)"
+      - "DIRECT"
+
+# --- 规则设置 (精简版) ---
+rules:
+  # 1. WebRTC 强效阻断 (保护真实IP)
+  - DST-PORT,3478/UDP,REJECT
+  - DST-PORT,19302/UDP,REJECT
+
+  # 2. Spotify 明确分流 (走海外)
+  - GEOSITE,spotify,🛡️ 海外自动代理
+
+  # 3. (原常见海外规则已删除，广告拦截也随之移除)
+  
+  # 4. 国内流量 -> 走成都节点
+  - GEOSITE,cn,🇨🇳 国内代理
+  - GEOIP,cn,🇨🇳 国内代理
+  
+  # 5. 兜底规则 -> 走海外
+  # (Google, YouTube, Ads 等所有未匹配流量都会走这里)
+  - MATCH,🛡️ 海外自动代理
