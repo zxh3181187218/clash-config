@@ -1,3 +1,4 @@
+# --- 基础设置 ---
 port: 7890
 socks-port: 7891
 allow-lan: true
@@ -6,30 +7,43 @@ log-level: info
 ipv6: true
 external-controller: 127.0.0.1:9090
 
+# --- DNS 设置 (关键修正) ---
 dns:
   enable: true
   listen: 0.0.0.0:53
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   ipv6: true
+  
+  # 1. 默认 DNS: 用于解析“节点本身的域名”
+  # 必须包含国内 DNS，否则还没连上代理就找不到节点在哪
   default-nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
+    - 223.5.5.5    # 阿里 DNS (解决节点解析问题)
+    - 119.29.29.29 # 腾讯 DNS
+    - 1.1.1.1      # 备用
+  
+  # 2. 核心 nameserver: 代理连上后，真正查询隐私数据的 DNS
+  # 这里依然保持你的要求：优先用 Cloudflare/Google
   nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
+    
+  # 3. 兜底策略
   fallback:
-    - 1.1.1.1
-    - 8.8.8.8
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  
   fallback-filter:
     geoip: true
     ipcidr:
       - 240.0.0.0/4
 
+# --- 节点列表 ---
 proxies:
+  # [1] 🇩🇪 德国 VLESS (IPv4)
   - name: "🇩🇪 德国 VLESS"
     type: vless
-    server: 47.108.130.73
+    server: 47.108.130.60
     port: 51398
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     network: ws
@@ -40,6 +54,7 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
 
+  # [2] 🚀 Hy2 备用 (IPv6)
   - name: "🚀 Hy2 备用"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
@@ -50,6 +65,7 @@ proxies:
     obfs-password: 8dS6p4JtMwE3q7VkH2
     skip-cert-verify: true
 
+  # [3] ☁️ VLESS Vision (IPv6)
   - name: "☁️ VLESS Vision"
     type: vless
     server: ipv6.zxh425.dpdns.org
@@ -65,6 +81,7 @@ proxies:
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
       short-id: f71dda44e6f4f3b7
 
+  # [4] 🇨🇳 国内专线
   - name: "🇨🇳 国内专线 (成都)"
     type: vmess
     server: 47.108.130.60
@@ -78,24 +95,25 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
 
+# --- 策略组 ---
 proxy-groups:
-  # 1. 海外流量组 (Fallback: 德国->Hy2->Vision)
+  # 1. 海外流量组 (修正测速地址)
   - name: "🛡️ 海外自动代理"
     type: fallback
     proxies:
       - "🇩🇪 德国 VLESS"
       - "🚀 Hy2 备用"
       - "☁️ VLESS Vision"
-    # 修改点：使用 Cloudflare 204 地址进行检测
-    url: 'http://cp.cloudflare.com/generate_204'
-    # 修改点：每 60 秒检测一次
+    # 改回 Google 地址，稳定性最高
+    url: 'http://www.gstatic.com/generate_204'
     interval: 60
 
-  # 2. 国内流量组 (指定走成都)
+  # 2. 国内流量组
   - name: "🇨🇳 国内代理"
     type: select
     proxies:
       - "🇨🇳 国内专线 (成都)"
+      - "DIRECT"
 
 # --- 规则设置 ---
 rules:
@@ -106,9 +124,9 @@ rules:
   # 2. Spotify 分流
   - GEOSITE,spotify,🛡️ 海外自动代理
 
-  # 3. 国内流量 -> 走成都
+  # 3. 国内流量
   - GEOSITE,cn,🇨🇳 国内代理
   - GEOIP,cn,🇨🇳 国内代理
   
-  # 4. 兜底 -> 走海外
+  # 4. 兜底
   - MATCH,🛡️ 海外自动代理
