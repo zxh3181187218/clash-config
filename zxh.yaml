@@ -7,7 +7,7 @@ log-level: info
 ipv6: true
 external-controller: 127.0.0.1:9090
 
-# --- DNS 设置 (纯净隐私 / 抗污染) ---
+# --- DNS 设置 (纯净隐私) ---
 dns:
   enable: true
   listen: 0.0.0.0:53
@@ -87,7 +87,7 @@ proxies:
 
 # --- 策略组 ---
 proxy-groups:
-  # 1. 海外流量组 (Fallback: 德国->Hy2->Vision)
+  # 1. 海外流量组
   - name: "🛡️ 海外自动代理"
     type: fallback
     proxies:
@@ -97,28 +97,27 @@ proxy-groups:
     url: 'http://www.gstatic.com/generate_204'
     interval: 300
 
-  # 2. 国内流量组 (指定走成都)
+  # 2. 国内流量组
   - name: "🇨🇳 国内代理"
     type: select
     proxies:
       - "🇨🇳 国内专线 (成都)"
       - "DIRECT"
 
-# --- 规则设置 (精简版) ---
+# --- 规则设置 (修正版) ---
 rules:
-  # 1. WebRTC 强效阻断 (保护真实IP)
-  - DST-PORT,3478/UDP,REJECT
-  - DST-PORT,19302/UDP,REJECT
+  # 1. WebRTC 阻断 (已修正语法)
+  # 拦截所有尝试通过 3478 和 19302 端口的连接 (含 UDP/TCP)
+  - DST-PORT,3478,REJECT
+  - DST-PORT,19302,REJECT
 
-  # 2. Spotify 明确分流 (走海外)
+  # 2. Spotify 分流
   - GEOSITE,spotify,🛡️ 海外自动代理
 
-  # 3. (原常见海外规则已删除，广告拦截也随之移除)
-  
-  # 4. 国内流量 -> 走成都节点
+  # 3. 国内流量 -> 走成都
   - GEOSITE,cn,🇨🇳 国内代理
   - GEOIP,cn,🇨🇳 国内代理
   
-  # 5. 兜底规则 -> 走海外
-  # (Google, YouTube, Ads 等所有未匹配流量都会走这里)
+  # 4. 兜底 -> 走海外
   - MATCH,🛡️ 海外自动代理
+  
