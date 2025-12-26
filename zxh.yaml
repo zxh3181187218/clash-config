@@ -1,4 +1,3 @@
-# --- 基础设置 ---
 port: 7890
 socks-port: 7891
 allow-lan: true
@@ -7,7 +6,6 @@ log-level: info
 ipv6: true
 external-controller: 127.0.0.1:9090
 
-# --- DNS 设置 (纯净隐私) ---
 dns:
   enable: true
   listen: 0.0.0.0:53
@@ -28,12 +26,10 @@ dns:
     ipcidr:
       - 240.0.0.0/4
 
-# --- 节点列表 ---
 proxies:
-  # [1] 海外主力：德国 VLESS (IPv4)
   - name: "🇩🇪 德国 VLESS"
     type: vless
-    server: 47.108.130.61
+    server: 47.108.130.73
     port: 51398
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     network: ws
@@ -44,7 +40,6 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
 
-  # [2] 海外备用：Hy2 (IPv6)
   - name: "🚀 Hy2 备用"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
@@ -55,7 +50,6 @@ proxies:
     obfs-password: 8dS6p4JtMwE3q7VkH2
     skip-cert-verify: true
 
-  # [3] 海外兜底：Vision (IPv6)
   - name: "☁️ VLESS Vision"
     type: vless
     server: ipv6.zxh425.dpdns.org
@@ -71,7 +65,6 @@ proxies:
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
       short-id: f71dda44e6f4f3b7
 
-  # [4] 国内专线：成都 VMess
   - name: "🇨🇳 国内专线 (成都)"
     type: vmess
     server: 47.108.130.60
@@ -85,29 +78,28 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
 
-# --- 策略组 ---
 proxy-groups:
-  # 1. 海外流量组
+  # 1. 海外流量组 (Fallback: 德国->Hy2->Vision)
   - name: "🛡️ 海外自动代理"
     type: fallback
     proxies:
       - "🇩🇪 德国 VLESS"
       - "🚀 Hy2 备用"
       - "☁️ VLESS Vision"
-    url: 'http://www.gstatic.com/generate_204'
-    interval: 300
+    # 修改点：使用 Cloudflare 204 地址进行检测
+    url: 'http://cp.cloudflare.com/generate_204'
+    # 修改点：每 60 秒检测一次
+    interval: 60
 
-  # 2. 国内流量组
+  # 2. 国内流量组 (指定走成都)
   - name: "🇨🇳 国内代理"
     type: select
     proxies:
       - "🇨🇳 国内专线 (成都)"
-      - "DIRECT"
 
-# --- 规则设置 (修正版) ---
+# --- 规则设置 ---
 rules:
-  # 1. WebRTC 阻断 (已修正语法)
-  # 拦截所有尝试通过 3478 和 19302 端口的连接 (含 UDP/TCP)
+  # 1. WebRTC 阻断
   - DST-PORT,3478,REJECT
   - DST-PORT,19302,REJECT
 
@@ -120,4 +112,3 @@ rules:
   
   # 4. 兜底 -> 走海外
   - MATCH,🛡️ 海外自动代理
-  
