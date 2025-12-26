@@ -33,7 +33,7 @@ proxies:
   # [1] 海外主力：德国 VLESS (IPv4)
   - name: "🇩🇪 德国 VLESS"
     type: vless
-    server: 47.108.130.60
+    server: 47.108.130.61
     port: 51398
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     network: ws
