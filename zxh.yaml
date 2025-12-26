@@ -4,10 +4,10 @@ socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
-ipv6: true
+ipv6: true  # 开启 IPv6 支持 (必须，否则备用节点无法连接)
 external-controller: 127.0.0.1:9090
 
-# --- DNS 设置 (关键修正) ---
+# --- DNS 设置 (修复版：兼顾连接性与隐私) ---
 dns:
   enable: true
   listen: 0.0.0.0:53
@@ -15,23 +15,22 @@ dns:
   fake-ip-range: 198.18.0.1/16
   ipv6: true
   
-  # 1. 默认 DNS: 用于解析“节点本身的域名”
-  # 必须包含国内 DNS，否则还没连上代理就找不到节点在哪
+  # [1] 引导 DNS：仅用于解析“节点本身的域名”
+  # 必须包含国内 DNS，否则还没连上代理就找不到节点 IP，导致所有备用节点失效
   default-nameserver:
-    - 223.5.5.5    # 阿里 DNS (解决节点解析问题)
-    - 119.29.29.29 # 腾讯 DNS
-    - 1.1.1.1      # 备用
+    - 223.5.5.5
+    - 119.29.29.29
   
-  # 2. 核心 nameserver: 代理连上后，真正查询隐私数据的 DNS
-  # 这里依然保持你的要求：优先用 Cloudflare/Google
+  # [2] 主要 DNS：代理连上后，真正查询隐私数据的 DNS (加密传输)
   nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
     
-  # 3. 兜底策略
+  # [3] 兜底 DNS
   fallback:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
+    - 223.5.5.5 # 防止国外 DoH 彻底连不上时断网
   
   fallback-filter:
     geoip: true
@@ -40,10 +39,12 @@ dns:
 
 # --- 节点列表 ---
 proxies:
-  # [1] 🇩🇪 德国 VLESS (IPv4)
+  # [1] 海外主力：德国 VLESS (IPv4)
+  # 注意：这里是你故意改错 IP 的版本 (61)，为了测试切换功能
+  # 测试完记得改回 60
   - name: "🇩🇪 德国 VLESS"
     type: vless
-    server: 47.108.130.61
+    server: 47.108.130.61  # <--- 目前是错误的 IP，用于触发故障转移
     port: 51398
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     network: ws
@@ -54,7 +55,7 @@ proxies:
       headers:
         Host: pull.free.video.10010.com
 
-  # [2] 🚀 Hy2 备用 (IPv6)
+  # [2] 海外备用：Hy2 (IPv6)
   - name: "🚀 Hy2 备用"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
@@ -65,7 +66,7 @@ proxies:
     obfs-password: 8dS6p4JtMwE3q7VkH2
     skip-cert-verify: true
 
-  # [3] ☁️ VLESS Vision (IPv6)
+  # [3] 海外兜底：Vision (IPv6)
   - name: "☁️ VLESS Vision"
     type: vless
     server: ipv6.zxh425.dpdns.org
@@ -81,7 +82,7 @@ proxies:
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
       short-id: f71dda44e6f4f3b7
 
-  # [4] 🇨🇳 国内专线
+  # [4] 国内专线：成都 VMess
   - name: "🇨🇳 国内专线 (成都)"
     type: vmess
     server: 47.108.130.60
@@ -97,36 +98,35 @@ proxies:
 
 # --- 策略组 ---
 proxy-groups:
-  # 1. 海外流量组 (修正测速地址)
+  # 1. 海外流量组 (Fallback 模式)
+  # 逻辑：优先检测第一个，如果挂了(Timeout)，自动切换到第二个
   - name: "🛡️ 海外自动代理"
     type: fallback
     proxies:
-      - "🇩🇪 德国 VLESS"
-      - "🚀 Hy2 备用"
-      - "☁️ VLESS Vision"
-    # 改回 Google 地址，稳定性最高
+      - "🇩🇪 德国 VLESS"    # 优先级 1
+      - "🚀 Hy2 备用"      # 优先级 2
+      - "☁️ VLESS Vision"  # 优先级 3
     url: 'http://www.gstatic.com/generate_204'
     interval: 60
 
-  # 2. 国内流量组
+  # 2. 国内流量组 (指定走成都)
   - name: "🇨🇳 国内代理"
     type: select
     proxies:
       - "🇨🇳 国内专线 (成都)"
-      - "DIRECT"
 
 # --- 规则设置 ---
 rules:
-  # 1. WebRTC 阻断
+  # 1. WebRTC 阻断 (防止 IP 泄露)
   - DST-PORT,3478,REJECT
   - DST-PORT,19302,REJECT
 
   # 2. Spotify 分流
   - GEOSITE,spotify,🛡️ 海外自动代理
 
-  # 3. 国内流量
+  # 3. 国内流量 -> 走成都节点
   - GEOSITE,cn,🇨🇳 国内代理
   - GEOIP,cn,🇨🇳 国内代理
   
-  # 4. 兜底
+  # 4. 兜底 -> 走海外组
   - MATCH,🛡️ 海外自动代理
