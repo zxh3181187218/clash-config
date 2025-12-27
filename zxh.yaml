@@ -1,35 +1,40 @@
-# 基础设置
 port: 7890
 socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
-ipv6: true # 您的节点是IPv6的，建议开启
+ipv6: true
 
-# --- DNS 防泄漏核心配置 ---
+# --- DNS 配置 (修复断网核心) ---
 dns:
   enable: true
   listen: 0.0.0.0:1053
   ipv6: true
-  enhanced-mode: fake-ip # 使用 Fake-IP 模式防止 DNS 污染和泄漏
+  enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
     - "*"
     - "+.lan"
     - "+.local"
   
-  # 默认 DNS (仅用于解析下方的 DoH 域名，不用于实际流量)
+  # 1. 基础解析（用于解析 proxy server 域名）
   default-nameserver:
     - 223.5.5.5
-    - 1.1.1.1
+    - 119.29.29.29
 
-  # 核心 DNS：优先 Cloudflare，其次 Google
-  # 这些请求会被强制通过代理发送，防止本地运营商窥探
+  # 2. 核心查询（走代理，防泄漏）
+  # 改用 UDP 方式，兼容性更好
   nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
+    - 8.8.8.8
+    - 1.1.1.1
+    - 208.67.222.222
 
-# --- 节点配置 ---
+  # 3. 分流策略（关键修复点）
+  # 强制节点域名使用国内 DNS 解析，确保能连上节点
+  nameserver-policy:
+    "geosite:cn,private": [223.5.5.5, 119.29.29.29]
+    "dpdns.org": [223.5.5.5] 
+
 proxies:
   - name: "🇺🇸 US - Hysteria2"
     type: hysteria2
@@ -40,6 +45,8 @@ proxies:
     skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
+    up: 50 Mbps
+    down: 100 Mbps
 
   - name: "🇺🇸 US - VLESS Reality"
     type: vless
@@ -56,7 +63,6 @@ proxies:
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
       short-id: f71dda44e6f4f3b7
 
-# --- 策略组 ---
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -67,24 +73,22 @@ proxy-groups:
       
   - name: ♻️ 自动选择
     type: url-test
-    url: http://www.gstatic.com/generate_204 # 使用 Google 延迟测试
-    interval: 60 # 这里按您之前的要求改成了 60秒
+    url: http://www.gstatic.com/generate_204
+    interval: 60
     tolerance: 50
     proxies:
       - 🇺🇸 US - Hysteria2
       - 🇺🇸 US - VLESS Reality
 
-# --- 规则 ---
 rules:
-  # 阻断 WebRTC 常用端口 (防止 IP 泄漏)
+  # 阻断 WebRTC
   - DST-PORT,19302/3478,REJECT,no-resolve
   
-  # 关键 DNS 规则：让 DNS 查询走代理
-  - DOMAIN-SUFFIX,google.com,🚀 节点选择
-  - DOMAIN-SUFFIX,cloudflare.com,🚀 节点选择
+  # DNS 走代理规则 (强制 8.8.8.8 走代理)
+  - IP-CIDR,8.8.8.8/32,🚀 节点选择
+  - IP-CIDR,1.1.1.1/32,🚀 节点选择
   
-  # 局域网直连
-  - GEOIP,PRIVATE,DIRECT,no-resolve
-  
-  # 兜底规则
+  # 常见分流
+  - GEOIP,CN,DIRECT
+  - GEOSITE,CN,DIRECT
   - MATCH,🚀 节点选择
