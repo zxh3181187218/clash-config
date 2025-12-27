@@ -30,43 +30,23 @@ dns:
   respect-rules: true
 
 proxies:
-  - name: "德国"
-    type: vless
-    server: 47.
-    port: 51398
-    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
-    cipher: auto
-    network: ws
-    tls: false
-    ws-opts:
-      path: "/"
-      headers:
-        Host: pull.free.video.10010.com
-
-  - name: "成都"
-    type: vmess
-    server: 
-    port: 25477
-    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
-    alterId: 0
-    cipher: auto
-    network: ws
-    tls: false
-    ws-opts:
-      path: "/"
-      headers:
-        Host: pull.free.video.10010.com
+  - name: "hy2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 9hT3m6FvRkS1e8PnL5
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: true
+    obfs: salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
+    up: 50 Mbps
+    down: 100 Mbps
 
 proxy-groups:
   - name: "国外流量"
     type: select
     proxies:
-      - "德国"
-
-  - name: "国内流量"
-    type: select
-    proxies:
-      - "成都"
+      - "hy2"
 
 rules:
   # 1. [隐私] WebRTC 强力拦截 (放在最前以防泄露)
@@ -75,9 +55,9 @@ rules:
   - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
 
   # 2. [分流] 国内流量 (CN) -> 走成都节点
-  - GEOSITE,CN,国内流量
-  - GEOIP,CN,国内流量
-  - GEOSITE,Category-games@cn,国内流量
+  - GEOSITE,CN,DIRECT 
+  - GEOIP,CN,DIRECT
+  - GEOSITE,Category-games@cn,DIRECT
   
   # 3. [兜底] 其余所有流量 -> 走德国节点
   - MATCH,国外流量
