@@ -52,20 +52,15 @@ proxies:
 
 proxy-groups:
   - name: Proxy
-    type: select
-    proxies:
-      - Auto
-      - US-Hysteria2
-      - US-VLESS-Reality
-
-  - name: Auto
     type: url-test
-    url: http://www.gstatic.com/generate_204
+    # 建议使用 Google 或 Cloudflare 的生成 204 地址，响应极快，适合测速
+    url: http://cp.cloudflare.com/generate_204
     interval: 60
     tolerance: 50
     proxies:
       - US-Hysteria2
       - US-VLESS-Reality
+
 
 rules:
   - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
