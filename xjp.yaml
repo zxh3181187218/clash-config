@@ -1,0 +1,84 @@
+Port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+external-controller: '127.0.0.1:9090'
+
+# DNS 配置 (全防泄漏 + 强制国外DNS)
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localhost"
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  respect-rules: true
+
+proxies:
+  - name: "德国"
+    type: vless
+    server: 47.
+    port: 51398
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "成都"
+    type: vmess
+    server: 
+    port: 25477
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    alterId: 0
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+proxy-groups:
+  - name: "国外流量"
+    type: select
+    proxies:
+      - "德国"
+
+  - name: "国内流量"
+    type: select
+    proxies:
+      - "成都"
+
+rules:
+  # 1. [隐私] WebRTC 强力拦截 (放在最前以防泄露)
+  # 拦截标准 STUN 端口 (3478) 和 Google 特有端口 (19302)
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
+  - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
+
+  # 2. [分流] 国内流量 (CN) -> 走成都节点
+  - GEOSITE,CN,国内流量
+  - GEOIP,CN,国内流量
+  - GEOSITE,Category-games@cn,国内流量
+  
+  # 3. [兜底] 其余所有流量 -> 走德国节点
+  - MATCH,国外流量
+  
