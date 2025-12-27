@@ -1,0 +1,100 @@
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: true # 您的截图证明您有 IPv6，这很好
+
+# --- DNS 配置 (针对联通 IPv6 优化) ---
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*"
+    - "+.lan"
+    - "+.local"
+  
+  # 1. 默认解析 (用于解析节点域名)
+  # 必须使用国内 DNS，确保能连上您的节点
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+  # 2. 核心名称服务器 (Clash 接管后使用的 DNS)
+  # 既然您直连能连上 Google DNS，这里使用标准 UDP 协议效果最好
+  nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+    - 208.67.222.222
+
+  # 3. 策略 (防止回环和死锁)
+  nameserver-policy:
+    # 强制节点域名走国内解析
+    "ipv6.zxh425.dpdns.org": [223.5.5.5, 2400:3200::1]
+    "geosite:cn": [223.5.5.5, 119.29.29.29]
+
+proxies:
+  - name: "🇺🇸 US - Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 9hT3m6FvRkS1e8PnL5
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: true
+    obfs: salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
+    up: 50 Mbps
+    down: 100 Mbps
+
+  - name: "🇺🇸 US - VLESS Reality"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
+proxy-groups:
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🇺🇸 US - Hysteria2
+      - 🇺🇸 US - VLESS Reality
+      
+  - name: ♻️ 自动选择
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 60
+    tolerance: 50
+    proxies:
+      - 🇺🇸 US - Hysteria2
+      - 🇺🇸 US - VLESS Reality
+
+rules:
+  # 阻断安卓私人 DNS 常用的 853 端口，防止绕过 Clash
+  - DST-PORT,853,REJECT
+  
+  # 阻断 WebRTC UDP
+  - DST-PORT,19302/3478,REJECT,no-resolve
+  
+  # 强制 DNS 检测网站走代理 (验证用)
+  - DOMAIN-SUFFIX,browserleaks.com,🚀 节点选择
+  - DOMAIN-SUFFIX,ipleak.net,🚀 节点选择
+  
+  # 国内流量直连
+  - GEOIP,CN,DIRECT
+  - GEOSITE,CN,DIRECT
+  
+  # 兜底
+  - MATCH,🚀 节点选择
