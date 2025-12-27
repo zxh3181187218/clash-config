@@ -19,7 +19,7 @@ dns:
     - 8.8.8.8
   nameserver-policy:
     "geosite:cn": [223.5.5.5]
-    "dpdns.org": [223.5.5.5]
+    "+.dpdns.org": [223.5.5.5]
 
 proxies:
   - name: "US-Hysteria2"
