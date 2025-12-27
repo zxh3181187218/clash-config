@@ -3,6 +3,7 @@ socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
+ipv6: true
 
 dns:
   enable: true
@@ -18,7 +19,7 @@ dns:
     - 8.8.8.8
   nameserver-policy:
     "geosite:cn": [223.5.5.5]
-    "+.dpdns.org": [223.5.5.5, "2400:3200::1"]
+    "dpdns.org": [223.5.5.5]
 
 proxies:
   - name: "US-Hysteria2"
@@ -67,7 +68,6 @@ proxy-groups:
 
 rules:
   - DST-PORT,853,REJECT
-  - DST-PORT,19302/3478,REJECT
   - DOMAIN-SUFFIX,browserleaks.com,Select
   - DOMAIN-SUFFIX,ipleak.net,Select
   - GEOIP,CN,DIRECT
