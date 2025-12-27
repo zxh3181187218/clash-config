@@ -1,52 +1,40 @@
-mixed-port: 7890
+port: 7890
+socks-port: 7891
 allow-lan: true
-bind-address: "*"
 mode: rule
 log-level: info
 ipv6: true
-external-controller: 127.0.0.1:9090
 
 dns:
   enable: true
+  listen: 0.0.0.0:1053
   ipv6: true
-  listen: 0.0.0.0:53
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter:
-    - "*.lan"
-    - "*.localdomain"
-    - "*.example"
-    - "*.invalid"
-    - "*.localhost"
-    - "*.test"
-    - "*.local"
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
   nameserver:
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
-  fallback:
-    - https://1.1.1.1/dns-query
-    - https://dns.google/dns-query
-  fallback-filter:
-    geoip: true
-    geoip-code: CN
-    ipcidr:
-      - 240.0.0.0/4
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver-policy:
+    "geosite:cn": [223.5.5.5]
+    "+.dpdns.org": [223.5.5.5]
 
 proxies:
-  - name: hy2
+  - name: "US-Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
     password: 9hT3m6FvRkS1e8PnL5
     sni: ipv6.zxh425.dpdns.org
-    skip-cert-verify: false
+    skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
+    up: 50 Mbps
+    down: 100 Mbps
 
-  - name: vless
+  - name: "US-VLESS-Reality"
     type: vless
     server: ipv6.zxh425.dpdns.org
     port: 443
@@ -56,38 +44,32 @@ proxies:
     udp: true
     flow: xtls-rprx-vision
     servername: gateway.icloud.com
+    client-fingerprint: chrome
     reality-opts:
       public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
       short-id: f71dda44e6f4f3b7
-    client-fingerprint: chrome
 
 proxy-groups:
-  - name: 节点选择
+  - name: Select
     type: select
     proxies:
-      - 自动选择
-      - 故障转移
-      - hy2
-      - vless
-      - DIRECT
-
-  - name: 自动选择
+      - Auto
+      - US-Hysteria2
+      - US-VLESS-Reality
+      
+  - name: Auto
     type: url-test
-    proxies:
-      - hy2
-      - vless
     url: http://www.gstatic.com/generate_204
-    interval: 300
+    interval: 60
     tolerance: 50
-
-  - name: 故障转移
-    type: fallback
     proxies:
-      - hy2
-      - vless
-    url: http://www.gstatic.com/generate_204
-    interval: 300
+      - US-Hysteria2
+      - US-VLESS-Reality
 
 rules:
+  - DST-PORT,853,REJECT
+  - DOMAIN-SUFFIX,browserleaks.com,Select
+  - DOMAIN-SUFFIX,ipleak.net,Select
   - GEOIP,CN,DIRECT
-  - MATCH,节点选择
+  - GEOSITE,CN,DIRECT
+  - MATCH,Select
