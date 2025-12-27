@@ -19,7 +19,6 @@ dns:
     - https://8.8.8.8/dns-query
   nameserver-policy:
     "hy2.zxh425.dpdns.org":[119.29.29.29, 223.5.5.5]
-    "geoip:cn": [223.5.5.5, 119.29.29.29]
     "geosite:cn": [223.5.5.5, 119.29.29.29]
   fallback: []
 
