@@ -3,92 +3,37 @@ socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
-ipv6: true
+ipv6: false
+external-controller: 127.0.0.1:9090
 
-# --- DNS 配置 (修复断网核心) ---
 dns:
   enable: true
   listen: 0.0.0.0:1053
-  ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter:
-    - "*"
-    - "+.lan"
-    - "+.local"
-  
-  # 1. 基础解析（用于解析 proxy server 域名）
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-
-  # 2. 核心查询（走代理，防泄漏）
-  # 改用 UDP 方式，兼容性更好
-  nameserver:
-    - 8.8.8.8
-    - 1.1.1.1
-    - 208.67.222.222
-
-  # 3. 分流策略（关键修复点）
-  # 强制节点域名使用国内 DNS 解析，确保能连上节点
+  default-nameserver: [223.5.5.5, 119.29.29.29]
+  nameserver: [1.1.1.1, 8.8.8.8]
   nameserver-policy:
-    "geosite:cn,private": [223.5.5.5, 119.29.29.29]
-    "dpdns.org": [223.5.5.5] 
+    "geosite:cn": [223.5.5.5]
+    "+.dpdns.org": [223.5.5.5]
+  fallback: []
 
 proxies:
-  - name: "🇺🇸 US - Hysteria2"
-    type: hysteria2
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    password: 9hT3m6FvRkS1e8PnL5
-    sni: ipv6.zxh425.dpdns.org
-    skip-cert-verify: true
-    obfs: salamander
-    obfs-password: 8dS6p4JtMwE3q7VkH2
-    up: 50 Mbps
-    down: 100 Mbps
+  - {name: US-Hy2, type: hysteria2, server: hy2.zxh425.dpdns.org, port: 443, password: 9hT3m6FvRkS1e8PnL5, sni: hy2.zxh425.dpdns.org, skip-cert-verify: true, obfs: salamander, obfs-password: 8dS6p4JtMwE3q7VkH2, up: 50 Mbps, down: 100 Mbps}
+  - {name: US-VLESS, type: vless, server: hy2.zxh425.dpdns.org, port: 443, uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab, network: tcp, tls: true, udp: true, flow: xtls-rprx-vision, servername: gateway.icloud.com, client-fingerprint: chrome, reality-opts: {public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4, short-id: f71dda44e6f4f3b7}}
 
-  - name: "🇺🇸 US - VLESS Reality"
-    type: vless
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
-    network: tcp
-    tls: true
-    udp: true
-    flow: xtls-rprx-vision
-    servername: gateway.icloud.com
-    client-fingerprint: chrome
-    reality-opts:
-      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
-      short-id: f71dda44e6f4f3b7
-
+# --- 简化重点看这里 ---
+# 只有一个组，名字叫 "Proxy"。
+# 类型是 "url-test" (自动测速选择)。
+# 它会自动对比两个美国节点，谁延迟低就用谁。
 proxy-groups:
-  - name: 🚀 节点选择
-    type: select
-    proxies:
-      - ♻️ 自动选择
-      - 🇺🇸 US - Hysteria2
-      - 🇺🇸 US - VLESS Reality
-      
-  - name: ♻️ 自动选择
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 60
-    tolerance: 50
-    proxies:
-      - 🇺🇸 US - Hysteria2
-      - 🇺🇸 US - VLESS Reality
+  - {name: Proxy, type: url-test, url: "http://www.gstatic.com/generate_204", interval: 60, tolerance: 50, proxies: [US-Hy2, US-VLESS]}
 
 rules:
-  # 阻断 WebRTC
-  - DST-PORT,19302/3478,REJECT,no-resolve
-  
-  # DNS 走代理规则 (强制 8.8.8.8 走代理)
-  - IP-CIDR,8.8.8.8/32,🚀 节点选择
-  - IP-CIDR,1.1.1.1/32,🚀 节点选择
-  
-  # 常见分流
-  - GEOIP,CN,DIRECT
+  - DST-PORT,853,REJECT
+  - DST-PORT,3478,REJECT
+  - DST-PORT,19302,REJECT
+  - DOMAIN-KEYWORD,leak,Proxy
   - GEOSITE,CN,DIRECT
-  - MATCH,🚀 节点选择
+  - GEOIP,CN,DIRECT
+  - MATCH,Proxy
