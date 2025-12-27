@@ -1,0 +1,53 @@
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: true # 开启IPv6支持，因为您的节点域名暗示可能是IPv6
+
+proxies:
+  - name: "🇺🇸 US - Hysteria2"
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 9hT3m6FvRkS1e8PnL5
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: true
+    obfs: salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
+
+  - name: "🇺🇸 US - VLESS Reality"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
+proxy-groups:
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🇺🇸 US - Hysteria2
+      - 🇺🇸 US - VLESS Reality
+      
+  - name: ♻️ 自动选择
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    proxies:
+      - 🇺🇸 US - Hysteria2
+      - 🇺🇸 US - VLESS Reality
+
+rules:
+  - GEOIP,CN,DIRECT
+  - MATCH,🚀 节点选择
