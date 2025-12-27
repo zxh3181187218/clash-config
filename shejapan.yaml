@@ -1,0 +1,69 @@
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: true
+external-controller: 127.0.0.1:9090
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  nameserver-policy:
+    "geoip:cn": [223.5.5.5, 119.29.29.29]
+    "geosite:cn": [223.5.5.5, 119.29.29.29]
+  fallback: []
+
+proxies:
+  - name: US-Hysteria2
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 9hT3m6FvRkS1e8PnL5
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: true
+    obfs: salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
+    up: 50 Mbps
+    down: 100 Mbps
+
+  - name: US-VLESS-Reality
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
+proxy-groups:
+  - name: Proxy
+    type: fallback 
+    # 建议使用 Google 或 Cloudflare 的生成 204 地址，响应极快，适合测速
+    url: http://cp.cloudflare.com/generate_204
+    interval: 60
+    proxies:
+      - US-Hysteria2
+      - US-VLESS-Reality
+
+
+rules:
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
+  - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
+  - GEOSITE,CN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,Proxy
