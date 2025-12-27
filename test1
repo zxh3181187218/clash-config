@@ -1,5 +1,42 @@
+mixed-port: 7890
+allow-lan: true
+bind-address: '*'
+mode: rule
+log-level: info
+ipv6: true
+external-controller: 127.0.0.1:9090
+
+dns:
+  enable: true
+  ipv6: true
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localdomain"
+    - "*.example"
+    - "*.invalid"
+    - "*.localhost"
+    - "*.test"
+    - "*.local"
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
 proxies:
-  - name: "hy2"
+  - name: hy2
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
@@ -9,7 +46,7 @@ proxies:
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
 
-  - name: "vless"
+  - name: vless
     type: vless
     server: ipv6.zxh425.dpdns.org
     port: 443
@@ -25,12 +62,32 @@ proxies:
     client-fingerprint: chrome
 
 proxy-groups:
-  - name: "节点选择"
+  - name: 节点选择
     type: select
     proxies:
+      - 自动选择
+      - 故障转移
       - hy2
       - vless
       - DIRECT
 
+  - name: 自动选择
+    type: url-test
+    proxies:
+      - hy2
+      - vless
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+
+  - name: 故障转移
+    type: fallback
+    proxies:
+      - hy2
+      - vless
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
 rules:
+  - GEOIP,CN,DIRECT
   - MATCH,节点选择
