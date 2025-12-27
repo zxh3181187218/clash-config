@@ -18,17 +18,17 @@ dns:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
   nameserver-policy:
-    "hy2.zxh425.dpdns.org": [223.5.5.5, 119.29.29.29]
+    "ipv6.zxh425.dpdns.org": [223.5.5.5, 119.29.29.29]
     "geosite:cn": [223.5.5.5, 119.29.29.29]
   fallback: []
 
 proxies:
   - name: US-Hysteria2
     type: hysteria2
-    server: hy2.zxh425.dpdns.org
+    server: ipv6.zxh425.dpdns.org
     port: 443
     password: 9hT3m6FvRkS1e8PnL5
-    sni: hy2.zxh425.dpdns.org
+    sni: ipv6.zxh425.dpdns.org
     skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
@@ -37,7 +37,7 @@ proxies:
 
   - name: US-VLESS-Reality
     type: vless
-    server: hy2.zxh425.dpdns.org
+    server: ipv6.zxh425.dpdns.org
     port: 443
     uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
     network: tcp
