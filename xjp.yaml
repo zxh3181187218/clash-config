@@ -3,10 +3,10 @@ socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
-ipv6: false
+ipv6: true # 必须开启，因为您的美国节点是 IPv6 的
 external-controller: '127.0.0.1:9090'
 
-# DNS 配置 (全防泄漏 + 强制国外DNS)
+# DNS 配置 (防泄漏 + 解决节点解析问题)
 dns:
   enable: true
   listen: 0.0.0.0:1053
@@ -15,22 +15,27 @@ dns:
   fake-ip-filter:
     - "*.lan"
     - "*.localhost"
+  
+  # 默认 DNS (用于解析 DoH 域名)
   default-nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
+    - 223.5.5.5
+    - 119.29.29.29
+  
+  # 核心 DNS (国外流量走这些，防泄漏)
   nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
-  proxy-server-nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
-  fallback:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
+  
+  # 必须添加这个策略，否则无法解析节点域名导致没网
+  nameserver-policy:
+    "ipv6.zxh425.dpdns.org": [223.5.5.5, 119.29.29.29]
+    "geosite:cn": [223.5.5.5, 119.29.29.29]
+
+  fallback: []
   respect-rules: true
 
 proxies:
-  - name: "hy2"
+  - name: "🇺🇸 US - Hysteria2"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
@@ -42,23 +47,53 @@ proxies:
     up: 50 Mbps
     down: 100 Mbps
 
+  - name: "🇺🇸 US - VLESS Reality"
+    type: vless
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    uuid: 3a7d914d-86d9-4cec-8e65-b08f5c0b98ab
+    network: tcp
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: gateway.icloud.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: IXNtZnkoBPz2Yz-o1Jia8gQLeCj4mh-cszPFQys_OH4
+      short-id: f71dda44e6f4f3b7
+
 proxy-groups:
   - name: "国外流量"
     type: select
     proxies:
-      - "hy2"
+      - "自动选择"
+      - "🇺🇸 US - Hysteria2"
+      - "🇺🇸 US - VLESS Reality"
+
+  - name: "自动选择"
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 60
+    tolerance: 50
+    proxies:
+      - "🇺🇸 US - Hysteria2"
+      - "🇺🇸 US - VLESS Reality"
+
+  - name: "国内流量"
+    type: select
+    proxies:
+      - DIRECT
+      - "国外流量" # 如果你想强制国内流量也走代理，选这个，但速度会慢
 
 rules:
-  # 1. [隐私] WebRTC 强力拦截 (放在最前以防泄露)
-  # 拦截标准 STUN 端口 (3478) 和 Google 特有端口 (19302)
+  # 1. [隐私] WebRTC 强力拦截
   - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
   - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
 
-  # 2. [分流] 国内流量 (CN) -> 走成都节点
-  - GEOSITE,CN,DIRECT 
-  - GEOIP,CN,DIRECT
-  - GEOSITE,Category-games@cn,DIRECT
+  # 2. [分流] 国内流量 (CN) -> 走直连
+  - GEOSITE,CN,国内流量
+  - GEOIP,CN,国内流量
+  - GEOSITE,Category-games@cn,国内流量
   
-  # 3. [兜底] 其余所有流量 -> 走德国节点
+  # 3. [兜底] 其余所有流量 -> 走美国节点
   - MATCH,国外流量
-  
