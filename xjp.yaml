@@ -1,46 +1,29 @@
-Port: 7890
+port: 7890
 socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
 ipv6: true
-external-controller: '127.0.0.1:9090'
+external-controller: 127.0.0.1:9090
 
 dns:
   enable: true
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter:
-    - "*.lan"
-    - "*.localhost"
-  
-  # 1. 默认 DNS
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
-  
-  # 2. 代理服务器专用 DNS (必须有，否则报错)
-  # 强制使用国内 DNS 解析您的节点域名，确保能连接
-  proxy-server-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-
-  # 3. 核心 DNS (上网用的，走代理防泄漏)
   nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
-
-  # 4. 强制策略 (确保节点域名不走代理 DNS)
   nameserver-policy:
     "hy2.zxh425.dpdns.org": [223.5.5.5, 119.29.29.29]
     "geosite:cn": [223.5.5.5, 119.29.29.29]
-
   fallback: []
-  respect-rules: true
 
 proxies:
-  - name: "🇺🇸 US - Hysteria2"
+  - name: US-Hysteria2
     type: hysteria2
     server: hy2.zxh425.dpdns.org
     port: 443
@@ -52,7 +35,7 @@ proxies:
     up: 50 Mbps
     down: 100 Mbps
 
-  - name: "🇺🇸 US - VLESS Reality"
+  - name: US-VLESS-Reality
     type: vless
     server: hy2.zxh425.dpdns.org
     port: 443
@@ -68,36 +51,25 @@ proxies:
       short-id: f71dda44e6f4f3b7
 
 proxy-groups:
-  - name: "国外流量"
+  - name: Proxy
     type: select
     proxies:
-      - "自动选择"
-      - "🇺🇸 US - Hysteria2"
-      - "🇺🇸 US - VLESS Reality"
+      - Auto
+      - US-Hysteria2
+      - US-VLESS-Reality
 
-  - name: "自动选择"
+  - name: Auto
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 60
     tolerance: 50
     proxies:
-      - "🇺🇸 US - Hysteria2"
-      - "🇺🇸 US - VLESS Reality"
-
-  - name: "国内流量"
-    type: select
-    proxies:
-      - DIRECT
-      - "国外流量"
+      - US-Hysteria2
+      - US-VLESS-Reality
 
 rules:
-  # 1. [隐私] WebRTC 拦截
   - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
   - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
-
-  # 2. [分流] 国内直连
-  - GEOSITE,CN,国内流量
-  - GEOIP,CN,国内流量
-  
-  # 3. [兜底] 走代理
-  - MATCH,国外流量
+  - GEOSITE,CN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,Proxy
