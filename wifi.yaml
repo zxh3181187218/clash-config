@@ -1,24 +1,10 @@
-# ===== 基础 =====
 port: 7890
 socks-port: 7891
-mixed-port: 7892
-allow-lan: false
-mode: rule
-log-level: info
-ipv6: true
+mode: global
+log-level: debug
 
-# ===== TUN（安卓稳定写法）=====
-tun:
-  enable: true
-  stack: system
-  auto-route: true
-  strict-route: true
-  auto-detect-interface: true
-  mtu: 9000
-
-# ===== 节点 =====
 proxies:
-  - name: hy2-ipv6
+  - name: hy2-test
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
@@ -26,29 +12,14 @@ proxies:
     sni: ipv6.zxh425.dpdns.org
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
-    skip-cert-verify: false
+    skip-cert-verify: true
     udp: true
 
-# ===== 代理组 =====
 proxy-groups:
-  - name: PROXY
+  - name: GLOBAL
     type: select
     proxies:
-      - hy2-ipv6
+      - hy2-test
 
-# ===== DNS（安卓不泄漏且可联网）=====
-dns:
-  enable: true
-  listen: 0.0.0.0:1053
-  ipv6: true
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  use-hosts: true
-
-  nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
-
-# ===== 规则 =====
 rules:
-  - MATCH,PROXY
+  - MATCH,GLOBAL
