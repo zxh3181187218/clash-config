@@ -29,10 +29,10 @@ proxies:
   # --- 国外节点 (Hy2 IPv6) ---
   - name: "Hy2-国外"
     type: hysteria2
-    server: ipv6.zxh425.dpdns.org
+    server: a.b.dpdns.org
     port: 443
     password: 9hT3m6FvRkS1e8PnL5
-    sni: ipv6.zxh425.dpdns.org
+    sni: a.b.dpdns.org
     skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
@@ -44,7 +44,7 @@ proxies:
   # --- 国内节点 (VMess 免流) ---
   - name: "VMess-免流"
     type: vmess
-    server: 47.108.130.60
+    server: 7.08.30.60
     port: 25477
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     alterId: 0
