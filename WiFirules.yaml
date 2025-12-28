@@ -9,21 +9,28 @@ external-controller: 0.0.0.0:9090
 dns:
   enable: true
   listen: 0.0.0.0:53
-  ipv6: true # 关键：开启 DNS 的 IPv6 支持
+  ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   
-  # 关键：专门用于解析“节点域名”的 DNS，确保能拿到 IPv6 地址
+  # 1. 专门用于解析“节点域名”的 DNS
+  # 必须使用国内 DNS 确保能准确找到您的 IPv6 节点地址
   proxy-server-nameserver:
     - https://223.5.5.5/dns-query
     - https://doh.pub/dns-query
-    
+
+  # 2. 默认 DNS (给国外网站用)
+  # 这里只填国外 DNS，且强制走代理，杜绝泄露给运营商
   nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-  fallback:
     - https://8.8.8.8/dns-query
     - https://1.1.1.1/dns-query
+
+  # 3. 指定策略 (给国内网站用)
+  # 只有匹配到 cn (国内) 列表的域名，才允许走国内 DNS
+  nameserver-policy:
+    "geosite:cn,private":
+      - https://223.5.5.5/dns-query
+      - https://doh.pub/dns-query
 
 proxies:
   - name: "Hy2-IPv6-Node"
@@ -37,8 +44,8 @@ proxies:
     obfs-password: 8dS6p4JtMwE3q7VkH2
     udp: true
     tfo: true
-    up: 100 Mbps    # 建议值，帮助协商速度
-    down: 100 Mbps  # 建议值，帮助协商速度
+    up: 100 Mbps
+    down: 100 Mbps
 
 proxy-groups:
   - name: 🚀 节点选择
@@ -48,8 +55,13 @@ proxy-groups:
       - DIRECT
 
 rules:
+  # 拦截广告
   - GEOSITE,category-ads-all,REJECT
+  
+  # 国内流量 -> 直连
   - GEOSITE,cn,DIRECT
   - GEOIP,cn,DIRECT
   - GEOIP,private,DIRECT
+  
+  # 剩余流量（国外） -> 走代理
   - MATCH,🚀 节点选择
