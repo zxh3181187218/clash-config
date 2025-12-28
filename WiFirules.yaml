@@ -1,0 +1,31 @@
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: debug
+
+proxies:
+  - name: hy2-test
+    type: hysteria2
+    server: ipv6.zxh425.dpdns.org
+    port: 443
+    password: 9hT3m6FvRkS1e8PnL5
+    sni: ipv6.zxh425.dpdns.org
+    obfs: salamander
+    obfs-password: 8dS6p4JtMwE3q7VkH2
+    skip-cert-verify: true
+    udp: true
+
+proxy-groups:
+  - name: GLOBAL
+    type: select
+    proxies:
+      - hy2-test
+      - DIRECT  # 添加 DIRECT 选项，代表直连
+
+rules:
+  # 国内流量直连
+  - GEOSITE,CN,DIRECT    # 中国网站走直连
+  - GEOIP,CN,DIRECT    # 中国IP走直连
+
+  # 其他流量走代理
+  - MATCH,GLOBAL  # 其他所有流量走代理
