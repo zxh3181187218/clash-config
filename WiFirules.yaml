@@ -35,10 +35,10 @@ dns:
 proxies:
   - name: "Hy2-IPv6-Node"
     type: hysteria2
-    server: ipv6.zxh425.dpdns.org
+    server: abc.zxh.dpdns.org
     port: 443
     password: 9hT3m6FvRkS1e8PnL5
-    sni: ipv6.zxh425.dpdns.org
+    sni: g.z.dpdns.org
     skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
