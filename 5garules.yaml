@@ -4,39 +4,45 @@ allow-lan: true
 mode: rule
 log-level: info
 ipv6: true
-external-controller: 127.0.0.1:9090
+external-controller: 0.0.0.0:9090
 
 dns:
   enable: true
-  listen: 0.0.0.0:1053
+  listen: 0.0.0.0:53
+  ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter:
-    - "*.lan"
-    - "*.localhost"
-  default-nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
+  
+  # 1. 默认 DNS (给国外用)
   nameserver:
-    - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
-  proxy-server-nameserver:
     - https://1.1.1.1/dns-query
-  respect-rules: true
+
+  # 2. 国内特定 DNS (阿里/腾讯)
+  # 即使是这些国内 DNS 请求，也会因为下方的 Rules 规则被强制送入 VMess 节点，不会直连
+  nameserver-policy:
+    "geosite:cn,private":
+      - https://223.5.5.5/dns-query
+      - https://doh.pub/dns-query
 
 proxies:
-  - name: "美国"
+  # --- 国外节点 (Hy2 IPv6) ---
+  - name: "Hy2-国外"
     type: hysteria2
-    server: hy2.zxh425.dpdns.org
+    server: ipv6.zxh425.dpdns.org
     port: 443
     password: 9hT3m6FvRkS1e8PnL5
-    sni: hy2.zxh425.dpdns.org
+    sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
-    skip-cert-verify: true
     udp: true
+    tfo: true
+    up: 100 Mbps
+    down: 100 Mbps
 
-  - name: "成都"
+  # --- 国内节点 (VMess 免流) ---
+  - name: "VMess-免流"
     type: vmess
     server: 47.108.130.60
     port: 25477
@@ -44,32 +50,39 @@ proxies:
     alterId: 0
     cipher: auto
     network: ws
-    tls: false
     ws-opts:
-      path: /
+      path: "/"
       headers:
         Host: pull.free.video.10010.com
+    udp: true
 
 proxy-groups:
-  - name: "国外流量"
+  # 策略组1：国外流量 (只有 Hy2)
+  - name: 🌍 国外流量
     type: select
     proxies:
-      - "美国"
-
-  - name: "国内流量"
+      - "Hy2-国外"
+  
+  # 策略组2：国内流量 (只有 VMess，没有 DIRECT！)
+  # 注意：这里如果节点不通，国内APP就会断网，不会跑通用流量
+  - name: 🇨n 国内流量
     type: select
     proxies:
-      - "成都"
+      - "VMess-免流"
 
 rules:
-  # WebRTC STUN 阻断（Clash 支持写法）
-  - DST-PORT,3478,REJECT
-  - DST-PORT,19302,REJECT
+  # 1. 必须保留：局域网 IP 直连
+  # 解释：这是为了让你能连上家里的路由器(192.168.x.x)或手机热点。
+  # 这部分流量不走公网，不扣费，如果这都走代理，你会连不上配置界面。
+  - GEOIP,private,DIRECT
 
-  # 国内流量
-  - GEOSITE,CN,国内流量
-  - GEOIP,CN,国内流量
-  - GEOSITE,category-games-cn,国内流量
-
-  # 兜底
-  - MATCH,国外流量
+  # 2. 广告拦截
+  - GEOSITE,category-ads-all,REJECT
+  
+  # 3. 关键规则：国内网站 -> 强制走“国内流量”组 (VMess)
+  - GEOSITE,cn,🇨n 国内流量
+  - GEOIP,cn,🇨n 国内流量
+  
+  # 4. 兜底规则：其他所有流量 -> 强制走“国外流量”组 (Hy2)
+  - MATCH,🌍 国外流量
+  
