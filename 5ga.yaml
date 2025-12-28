@@ -7,9 +7,18 @@ mode: rule
 log-level: info
 ipv6: true
 
+# ===== TUN（关键）=====
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  strict-route: false
+  auto-detect-interface: true
+  mtu: 1400
+
 # ===== 节点 =====
 proxies:
-  # 国外 hy2（IPv6）
+  # 国外 IPv6-only hy2
   - name: hy2-global
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
@@ -21,7 +30,7 @@ proxies:
     skip-cert-verify: true
     udp: true
 
-  # 国内 成都节点
+  # 国内 成都 IPv4 VMess
   - name: cd-cn
     type: vmess
     server: 47.108.130.60
@@ -48,13 +57,11 @@ proxy-groups:
     proxies:
       - cd-cn
 
-# ===== DNS（关键修复点）=====
+# ===== DNS（TUN 模式稳定写法）=====
 dns:
   enable: true
-  listen: 0.0.0.0:1053
-  ipv6: true          # ⭐⭐⭐ 必须开启
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
+  ipv6: true
+  enhanced-mode: redir-host
   use-hosts: true
 
   nameserver:
@@ -63,7 +70,7 @@ dns:
 
 # ===== 规则 =====
 rules:
-  # 国内 → 成都
+  # 国内流量 → 成都
   - GEOSITE,CN,CN
   - GEOIP,CN,CN
 
