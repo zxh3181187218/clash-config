@@ -1,78 +1,84 @@
-# ===== 基础 =====
-port: 7890
+Port: 7890
 socks-port: 7891
-mixed-port: 7892
-allow-lan: false
+allow-lan: true
 mode: rule
 log-level: info
-ipv6: true
+ipv6: false
+external-controller: '127.0.0.1:9090'
 
-# ===== TUN（关键）=====
-tun:
+# DNS 配置 (全防泄漏 + 强制国外DNS)
+dns:
   enable: true
-  stack: system
-  auto-route: true
-  strict-route: false
-  auto-detect-interface: true
-  mtu: 1400
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localhost"
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  respect-rules: true
 
-# ===== 节点 =====
 proxies:
-  # 国外 IPv6-only hy2
-  - name: hy2-global
-    type: hysteria2
-    server: ipv6.zxh425.dpdns.org
-    port: 443
-    password: 9hT3m6FvRkS1e8PnL5
-    sni: ipv6.zxh425.dpdns.org
-    obfs: salamander
-    obfs-password: 8dS6p4JtMwE3q7VkH2
-    skip-cert-verify: true
-    udp: true
+  - name: "德国"
+    type: vless
+    server: 47.
+    port: 51398
+    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
 
-  # 国内 成都 IPv4 VMess
-  - name: cd-cn
+  - name: "成都"
     type: vmess
-    server: 47.108.130.60
+    server: 
     port: 25477
     uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
     alterId: 0
     cipher: auto
-    udp: true
     network: ws
+    tls: false
     ws-opts:
-      path: /
+      path: "/"
       headers:
         Host: pull.free.video.10010.com
 
-# ===== 代理组 =====
 proxy-groups:
-  - name: PROXY
+  - name: "国外流量"
     type: select
     proxies:
-      - hy2-global
+      - "德国"
 
-  - name: CN
+  - name: "国内流量"
     type: select
     proxies:
-      - cd-cn
+      - "成都"
 
-# ===== DNS（TUN 模式稳定写法）=====
-dns:
-  enable: true
-  ipv6: true
-  enhanced-mode: redir-host
-  use-hosts: true
-
-  nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
-
-# ===== 规则 =====
 rules:
-  # 国内流量 → 成都
-  - GEOSITE,CN,CN
-  - GEOIP,CN,CN
+  # 1. [隐私] WebRTC 强力拦截 (放在最前以防泄露)
+  # 拦截标准 STUN 端口 (3478) 和 Google 特有端口 (19302)
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
+  - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
 
-  # 其他 → 国外
-  - MATCH,PROXY
+  # 2. [分流] 国内流量 (CN) -> 走成都节点
+  - GEOSITE,CN,国内流量
+  - GEOIP,CN,国内流量
+  - GEOSITE,Category-games@cn,国内流量
+  
+  # 3. [兜底] 其余所有流量 -> 走德国节点
+  - MATCH,国外流量
+  
