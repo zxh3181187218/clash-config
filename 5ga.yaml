@@ -5,11 +5,11 @@ mixed-port: 7892
 allow-lan: false
 mode: rule
 log-level: info
-ipv6: false
+ipv6: true
 
 # ===== 节点 =====
 proxies:
-  # 国外 hy2 节点
+  # 国外 hy2（IPv6）
   - name: hy2-global
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
@@ -21,7 +21,7 @@ proxies:
     skip-cert-verify: true
     udp: true
 
-  # 国内 成都 vmess 节点（不直连）
+  # 国内 成都节点
   - name: cd-cn
     type: vmess
     server: 47.108.130.60
@@ -38,23 +38,21 @@ proxies:
 
 # ===== 代理组 =====
 proxy-groups:
-  # 国外流量
   - name: PROXY
     type: select
     proxies:
       - hy2-global
 
-  # 国内流量（强制走成都）
   - name: CN
     type: select
     proxies:
       - cd-cn
 
-# ===== DNS（不直连，不泄漏，安卓稳定）=====
+# ===== DNS（关键修复点）=====
 dns:
   enable: true
   listen: 0.0.0.0:1053
-  ipv6: false
+  ipv6: true          # ⭐⭐⭐ 必须开启
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   use-hosts: true
@@ -65,11 +63,9 @@ dns:
 
 # ===== 规则 =====
 rules:
-  # 中国 IP 走成都节点（不直连）
+  # 国内 → 成都
+  - GEOSITE,CN,CN
   - GEOIP,CN,CN
 
-  # 中国域名走成都节点
-  - GEOSITE,CN,CN
-
-  # 其余全部走国外 hy2
+  # 其他 → 国外
   - MATCH,PROXY
