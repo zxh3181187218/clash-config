@@ -1,31 +1,57 @@
 port: 7890
 socks-port: 7891
+allow-lan: true
 mode: rule
-log-level: debug
+log-level: info
+ipv6: true # 您的节点域名看起来是IPv6，必须开启此选项
+external-controller: 0.0.0.0:9090
+
+# DNS 配置：使用 Fake-IP 模式，国内流量走阿里/腾讯DNS，国外走自动
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  fallback:
+    - https://8.8.8.8/dns-query
+    - https://1.1.1.1/dns-query
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
 
 proxies:
-  - name: hy2-test
+  - name: "Hy2-IPv6-Node"
     type: hysteria2
     server: ipv6.zxh425.dpdns.org
     port: 443
     password: 9hT3m6FvRkS1e8PnL5
     sni: ipv6.zxh425.dpdns.org
+    skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
-    skip-cert-verify: true
-    udp: true
 
 proxy-groups:
-  - name: GLOBAL
+  - name: 🚀 节点选择
     type: select
     proxies:
-      - hy2-test
-      - DIRECT  # 添加 DIRECT 选项，代表直连
+      - "Hy2-IPv6-Node"
+      - DIRECT
 
 rules:
+  # 拦截常见广告 (可选)
+  - GEOSITE,category-ads-all,REJECT
+  
   # 国内流量直连
-  - GEOSITE,CN,DIRECT    # 中国网站走直连
-  - GEOIP,CN,DIRECT    # 中国IP走直连
-
-  # 其他流量走代理
-  - MATCH,GLOBAL  # 其他所有流量走代理
+  - GEOSITE,cn,DIRECT
+  - GEOIP,cn,DIRECT
+  - GEOIP,private,DIRECT
+  
+  # 剩余流量（国外）走代理
+  - MATCH,🚀 节点选择
