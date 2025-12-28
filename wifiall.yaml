@@ -6,10 +6,10 @@ log-level: debug
 proxies:
   - name: hy2-test
     type: hysteria2
-    server: ipv6.zxh425.dpdns.org
+    server: abc.zxh.dpdns.org
     port: 443
     password: 9hT3m6FvRkS1e8PnL5
-    sni: ipv6.zxh425.dpdns.org
+    sni: abc.zxh.dpdns.org
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
     skip-cert-verify: true
