@@ -3,28 +3,27 @@ socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
-ipv6: true # 您的节点域名看起来是IPv6，必须开启此选项
+ipv6: true
 external-controller: 0.0.0.0:9090
 
-# DNS 配置：使用 Fake-IP 模式，国内流量走阿里/腾讯DNS，国外走自动
 dns:
   enable: true
   listen: 0.0.0.0:53
+  ipv6: true # 关键：开启 DNS 的 IPv6 支持
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+  
+  # 关键：专门用于解析“节点域名”的 DNS，确保能拿到 IPv6 地址
+  proxy-server-nameserver:
+    - https://223.5.5.5/dns-query
+    - https://doh.pub/dns-query
+    
   nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
   fallback:
     - https://8.8.8.8/dns-query
     - https://1.1.1.1/dns-query
-  fallback-filter:
-    geoip: true
-    ipcidr:
-      - 240.0.0.0/4
 
 proxies:
   - name: "Hy2-IPv6-Node"
@@ -36,6 +35,10 @@ proxies:
     skip-cert-verify: true
     obfs: salamander
     obfs-password: 8dS6p4JtMwE3q7VkH2
+    udp: true
+    tfo: true
+    up: 100 Mbps    # 建议值，帮助协商速度
+    down: 100 Mbps  # 建议值，帮助协商速度
 
 proxy-groups:
   - name: 🚀 节点选择
@@ -45,13 +48,8 @@ proxy-groups:
       - DIRECT
 
 rules:
-  # 拦截常见广告 (可选)
   - GEOSITE,category-ads-all,REJECT
-  
-  # 国内流量直连
   - GEOSITE,cn,DIRECT
   - GEOIP,cn,DIRECT
   - GEOIP,private,DIRECT
-  
-  # 剩余流量（国外）走代理
   - MATCH,🚀 节点选择
