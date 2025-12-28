@@ -1,4 +1,4 @@
-# ===== 基础设置 =====
+# ===== 基础 =====
 port: 7890
 socks-port: 7891
 mixed-port: 7892
@@ -7,15 +7,14 @@ mode: rule
 log-level: info
 ipv6: true
 
-# ===== TUN 模式（防 WebRTC / IPv6 / UDP 泄漏 核心）=====
+# ===== TUN（安卓稳定写法）=====
 tun:
   enable: true
   stack: system
   auto-route: true
   strict-route: true
   auto-detect-interface: true
-  dns-hijack:
-    - any:53
+  mtu: 9000
 
 # ===== 节点 =====
 proxies:
@@ -36,12 +35,11 @@ proxy-groups:
     type: select
     proxies:
       - hy2-ipv6
-      - DIRECT
 
-# ===== DNS（防 DNS 泄漏）=====
+# ===== DNS（安卓不泄漏且可联网）=====
 dns:
   enable: true
-  listen: 127.0.0.1:1053
+  listen: 0.0.0.0:1053
   ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
@@ -51,16 +49,6 @@ dns:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
 
-  fallback:
-    - https://9.9.9.9/dns-query
-    - https://1.0.0.1/dns-query
-
-  fallback-filter:
-    geoip: true
-    geoip-code: CN
-    ipcidr:
-      - 240.0.0.0/4
-
-# ===== 规则（极简 + 不泄漏）=====
+# ===== 规则 =====
 rules:
   - MATCH,PROXY
