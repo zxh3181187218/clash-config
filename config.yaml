@@ -61,7 +61,7 @@ proxy-groups:
   - name: "国外流量"
     type: select
     proxies:
-      - "德国"
+      - "美国"
 
   - name: "国内流量"
     type: select
@@ -79,5 +79,5 @@ rules:
   - GEOIP,CN,国内流量
   - GEOSITE,Category-games@cn,国内流量
   
-  # 3. [兜底] 其余所有流量 -> 走德国节点
+  # 3. [兜底] 其余所有流量 -> 走美国节点
   - MATCH,国外流量
