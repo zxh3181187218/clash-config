@@ -30,11 +30,11 @@ dns:
   respect-rules: true
 
 proxies:
-  - name: "德国"
+  - name: "美国"
     type: vless
-    server: 47.
-    port: 51398
-    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    server: 47.108.229.151
+    port: 40539
+    uuid: e66c4093-ffe5-43d4-c18e-62b254b3934a
     cipher: auto
     network: ws
     tls: false
@@ -44,10 +44,10 @@ proxies:
         Host: pull.free.video.10010.com
 
   - name: "成都"
-    type: vmess
-    server: 
-    port: 25477
-    uuid: 8f800fe3-5af8-4021-cc74-fc159ca640a9
+    type: vless
+    server: 47.108.229.151
+    port: 46513
+    uuid: e66c4093-ffe5-43d4-c18e-62b254b3934a
     alterId: 0
     cipher: auto
     network: ws
