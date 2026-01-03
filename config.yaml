@@ -32,9 +32,9 @@ dns:
 proxies:
   - name: "美国"
     type: vless
-    server: 4
+    server: 47.108.229.151
     port: 40539
-    uuid: e66c4093-ffe5-43d4-c18e-62b254b3934a
+    uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
     cipher: auto
     network: ws
     tls: false
@@ -45,9 +45,9 @@ proxies:
 
   - name: "成都"
     type: vless
-    server: 47
+    server: 47.108.229.151
     port: 46513
-    uuid: e66c4093-ffe5-43d4-c18e-62b254b3934a
+    uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
     alterId: 0
     cipher: auto
     network: ws
