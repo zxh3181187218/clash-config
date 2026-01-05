@@ -4,7 +4,6 @@ allow-lan: true
 mode: rule
 log-level: info
 ipv6: false
-udp: true
 external-controller: '127.0.0.1:9090'
 
 # DNS 配置 (全防泄漏 + 强制国外DNS)
