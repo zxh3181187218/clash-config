@@ -67,10 +67,19 @@ proxy-groups:
     type: select
     proxies:
       - "成都"
+      
+rule-providers:
+  anti-ad:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/privacy-protection-tools/anti-AD/master/anti-ad-clash.yaml"
+    path: ./rules/anti-ad.yaml
+    interval: 86400
 
 rules:
   # 1. [隐私] WebRTC 强力拦截 (放在最前以防泄露)
-  # 拦截标准 STUN 端口 (3478) 和 Google 特有端口 (19302)
+  - RULE-SET,anti-ad,REJECT
+  - GEOSITE,category-ads-all,REJECT
   - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
   - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
 
