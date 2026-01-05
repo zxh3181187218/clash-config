@@ -75,6 +75,8 @@ rules:
   - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
 
   # 2. [分流] 国内流量 (CN) -> 走成都节点
+  - GEOSITE,google-play,国外流量
+  - GEOSITE,google,国外流量
   - GEOSITE,CN,国内流量
   - GEOIP,CN,国内流量
   - GEOSITE,Category-games@cn,国内流量
