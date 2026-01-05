@@ -79,6 +79,9 @@ rules:
   - GEOSITE,google,国外流量
   - GEOSITE,tiktok,国外流量
   - GEOSITE,telegram,国外流量
+  - GEOSITE,twitter,国外流量
+  - DOMAIN-SUFFIX,grok.com,国外流量
+  - DOMAIN-SUFFIX,x.ai,国外流量
   - GEOSITE,douyin,国内流量
   - GEOSITE,CN,国内流量
   - GEOIP,CN,国内流量
