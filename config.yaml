@@ -4,6 +4,7 @@ allow-lan: true
 mode: rule
 log-level: info
 ipv6: false
+udp: true
 external-controller: '127.0.0.1:9090'
 
 # DNS 配置 (全防泄漏 + 强制国外DNS)
@@ -32,7 +33,7 @@ dns:
 proxies:
   - name: "美国"
     type: vless
-    server: 98.158.259.87
+    server: 47.108.229.151
     port: 40539
     uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
     cipher: auto
@@ -45,7 +46,7 @@ proxies:
 
   - name: "成都"
     type: vless
-    server: 46667.0.114.114
+    server: 47.108.229.151
     port: 46513
     uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
     alterId: 0
