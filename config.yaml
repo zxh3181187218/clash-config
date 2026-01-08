@@ -31,7 +31,7 @@ dns:
 
 proxies:
   - name: "美国"
-    type: vmess
+    type: vless
     server: 47.108.229.151
     port: 40539
     uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
@@ -44,7 +44,7 @@ proxies:
         Host: pull.free.video.10010.com
 
   - name: "成都"
-    type: vmess
+    type: vless
     server: 47.108.229.151
     port: 46513
     uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
@@ -80,6 +80,7 @@ rules:
   # 1. [隐私] WebRTC 强力拦截 (放在最前以防泄露)
   - RULE-SET,anti-ad,REJECT
   - GEOSITE,category-ads-all,REJECT
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
   - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
   - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
 
