@@ -1,0 +1,42 @@
+# ================= 基础设置 =================
+port: 7890
+socks-port: 7891
+mixed-port: 7893
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false             # 建议关闭，防止免流漏流量或IP泄露
+
+# ================= 代理节点 =================
+proxies:
+  - name: "成都免流-联通"
+    type: vless
+    server: 47.108.229.151
+    port: 46513
+    uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
+    udp: true
+    tls: false
+    network: ws
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+# ================= 策略组 =================
+proxy-groups:
+  - name: "核心代理"
+    type: select
+    proxies:
+      - "成都免流-联通"
+      - DIRECT
+
+# ================= 分流规则 =================
+rules:
+  # 注意：为了隐藏本机IP + 实现免流，这里去掉了常见的国内直连规则(GeoIP CN)
+  # 这样所有流量都会强制走代理服务器
+  
+  # 1. 局域网地址仍然直连（访问路由器后台等需要）
+  - GEOIP,PRIVATE,DIRECT,no-resolve
+  
+  # 2. 剩下的所有流量全部走代理
+  - MATCH,核心代理
