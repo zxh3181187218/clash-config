@@ -5,7 +5,10 @@ mixed-port: 7893
 allow-lan: true
 mode: rule
 log-level: info
-ipv6: false             # 建议关闭，防止免流漏流量或IP泄露
+
+# 【关键点1】开启 IPv6
+# 只有开启了，Clash 才能“抓”住 IPv6 的流量
+ipv6: true
 
 # ================= 代理节点 =================
 proxies:
@@ -32,11 +35,14 @@ proxy-groups:
 
 # ================= 分流规则 =================
 rules:
-  # 注意：为了隐藏本机IP + 实现免流，这里去掉了常见的国内直连规则(GeoIP CN)
-  # 这样所有流量都会强制走代理服务器
-  
-  # 1. 局域网地址仍然直连（访问路由器后台等需要）
+  # 【关键点2】阻断所有 IPv6 流量
+  # 这一行必须放在最前面。
+  # 含义：抓到任何 IPv6 地址 (::/0)，直接拒接 (REJECT)。
+  # 效果：抖音被迫放弃 IPv6，改用 IPv4，从而被下面的规则代理。
+  - IP-CIDR6,::/0,REJECT,no-resolve
+
+  # 局域网直连
   - GEOIP,PRIVATE,DIRECT,no-resolve
   
-  # 2. 剩下的所有流量全部走代理
+  # 剩下的所有流量（也就是 IPv4 流量）全部走代理
   - MATCH,核心代理
