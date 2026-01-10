@@ -1,0 +1,124 @@
+# 基础设置
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+# 建议关闭 IPv6，防止手机/电脑优先走 IPv6 直连导致定位泄露
+ipv6: false 
+external-controller: '127.0.0.1:9090'
+
+# --- 新增：TUN 模式设置 (核心部分) ---
+tun:
+  enable: true
+  stack: system           # Windows/MacOS 推荐 system，兼容性最好
+  auto-route: true        # 自动添加路由表，接管所有流量
+  auto-detect-interface: true # 自动检测网卡
+  dns-hijack:             # 劫持所有 DNS 查询
+    - any:53
+
+# --- 新增：域名嗅探 (推荐) ---
+# 开启后，Clash 能从流量中还原域名，让分流规则更精准
+sniffer:
+  enable: true
+  parse-pure-ip: true     # 对纯 IP 流量也尝试嗅探域名
+  sniff:
+    TLS:
+      ports: [443, 8443]
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+
+# --- 优化：DNS 设置 ---
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localhost"
+    - "stun.*"
+    - "msftconnecttest.com"
+    - "msftncsi.com"
+  default-nameserver:
+    - 223.5.5.5           # 阿里 DNS，用于解析国内域名
+    - 119.29.29.29        # 腾讯 DNS
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
+  respect-rules: true
+
+proxies:
+  - name: "美国"
+    type: vless
+    server: 47.108.229.151
+    port: 40539
+    uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+  - name: "成都"
+    type: vless
+    server: 47.108.229.151
+    port: 46513
+    uuid: c8ccc5cd-fb5d-42ed-987f-36dec6152818
+    # alterId 在 VLESS 协议中无效，已保留但实际会被忽略
+    alterId: 0 
+    cipher: auto
+    network: ws
+    tls: false
+    ws-opts:
+      path: "/"
+      headers:
+        Host: pull.free.video.10010.com
+
+proxy-groups:
+  - name: "国外流量"
+    type: select
+    proxies:
+      - "美国"
+
+  - name: "国内流量"
+    type: select
+    proxies:
+      - "成都"
+
+rules:
+  # 既然上面关闭了 IPv6，这条规则其实是双重保险
+  - IP-CIDR6,::/0,REJECT,no-resolve
+  
+  - GEOSITE,category-ads-all,REJECT
+  
+  # 注意：你在规则里显式阻断了 UDP 443 (QUIC)，这意味着抖音将无法使用 HTTP/3
+  # 这会强制抖音回退到 TCP，有助于稳定性，但如果你想测 UDP 转发，需要注释掉下面这几行
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
+  - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
+  
+  - GEOSITE,google-play,国外流量
+  - GEOSITE,google,国外流量
+  
+  # --- 关键修改：添加针对抖音的强制规则 ---
+  # 确保这些规则在 GEOIP,CN 之前
+  - DOMAIN-SUFFIX,douyin.com,国内流量
+  - DOMAIN-SUFFIX,amemv.com,国内流量
+  - DOMAIN-SUFFIX,snssdk.com,国内流量
+  
+  - GEOSITE,CN,国内流量
+  - GEOIP,CN,国内流量
+  - GEOSITE,Category-games@cn,国内流量
+  
+  - MATCH,国外流量
