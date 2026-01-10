@@ -1,30 +1,19 @@
-# ---------------------------------------------------
-# 基础设置
-# ---------------------------------------------------
 port: 7890
 socks-port: 7891
 allow-lan: true
 mode: rule
 log-level: info
-# 【核心】强制关闭 IPv6，防止抖音绕过代理暴露真实位置
 ipv6: false
 external-controller: '127.0.0.1:9090'
-
-# ---------------------------------------------------
-# TUN 模式 (接管系统所有流量)
-# ---------------------------------------------------
 tun:
   enable: true
-  stack: system           # Android/Windows 推荐 system
-  auto-route: true        # 自动添加路由
+  stack: system   
+  auto-route: true   
   auto-detect-interface: true
-  strict-route: true      # 严格路由，防止流量泄露
+  strict-route: true 
   dns-hijack:
     - any:53
 
-# ---------------------------------------------------
-# 嗅探器 (让规则对纯 IP 流量也能生效)
-# ---------------------------------------------------
 sniffer:
   enable: true
   parse-pure-ip: true
@@ -35,9 +24,6 @@ sniffer:
       ports: [80, 8080-8880]
       override-destination: true
 
-# ---------------------------------------------------
-# DNS 设置 (防泄露 + 强制远端解析)
-# ---------------------------------------------------
 dns:
   enable: true
   listen: 0.0.0.0:1053
@@ -50,36 +36,23 @@ dns:
     - "msftconnecttest.com"
     - "msftncsi.com"
   
-  # 1. 默认 DNS：只留纯 IP，仅用于引导启动
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
   
-  # 2. 核心 DNS：全部使用加密 DoH，防止运营商窥探
   nameserver:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
   
-  # 3. 策略 DNS：强制抖音等国内域名走国内 DNS 解析（但流量会根据规则走代理）
-  # 配合下面的 nameserver-policy 使用
   nameserver-policy:
     "geosite:cn": https://223.5.5.5/dns-query
-    "*.douyin.com": https://223.5.5.5/dns-query
-    "*.amemv.com": https://223.5.5.5/dns-query
 
-  # 4. 代理 DNS：解析节点域名用的
   proxy-server-nameserver:
     - https://223.5.5.5/dns-query
     - https://1.1.1.1/dns-query
-    
-  # 【核心】移除 fallback，禁止回退到本地运营商 DNS，彻底杜绝泄露
-  # fallback: [] 
 
   respect-rules: true
 
-# ---------------------------------------------------
-# 代理节点 (根据你提供的信息还原)
-# ---------------------------------------------------
 proxies:
   - name: "美国"
     type: vless
@@ -104,16 +77,12 @@ proxies:
     cipher: auto
     network: ws
     tls: false
-    # 这里必须开启 true，虽然我们要封锁大部分 UDP，但 DNS 解析(UDP 53)需要通过它转发
     udp: true 
     ws-opts:
       path: "/"
       headers:
         Host: pull.free.video.10010.com
-
-# ---------------------------------------------------
-# 代理组
-# ---------------------------------------------------
+        
 proxy-groups:
   - name: "国外流量"
     type: select
@@ -124,50 +93,16 @@ proxy-groups:
     type: select
     proxies:
       - "成都"
-      - "DIRECT"
-
-# ---------------------------------------------------
-# 分流规则 (逻辑核心)
-# ---------------------------------------------------
+      
 rules:
-  # 1. 必须放在第一条：防止 IPv6 泄露
   - IP-CIDR6,::/0,REJECT,no-resolve
-  
-  # -------------------------------------------------
-  # UDP 管控区 (防免流跳点核心)
-  # -------------------------------------------------
-  
-  # [放行] DNS 解析 (UDP 53) - 必须允许，否则无法上网
-  # 让它走国内流量组，通过你的 VLESS 节点免流转发出去
   - AND,((NETWORK,UDP),(DST-PORT,53)),国内流量
-  
-  # [放行] NTP 时间同步 (UDP 123) - 必须允许，否则证书报错
   - AND,((NETWORK,UDP),(DST-PORT,123)),国内流量
-
-  # [绝杀] 阻断除此之外的所有 UDP
-  # 这一步会杀死抖音的 QUIC 协议，逼迫它回退到 TCP，从而成功免流
   - NETWORK,UDP,REJECT
-  
-  # -------------------------------------------------
-  # TCP 业务规则
-  # -------------------------------------------------
-  
-  # 去广告
   - GEOSITE,category-ads-all,REJECT
-  
-  # 抖音强制走成都节点 (修复 IP 归属地)
-  - DOMAIN-SUFFIX,douyin.com,国内流量
-  - DOMAIN-SUFFIX,amemv.com,国内流量
-  - DOMAIN-SUFFIX,snssdk.com,国内流量
-  - DOMAIN-KEYWORD,core-c-lq,国内流量
-  
-  # 其他应用分流
   - GEOSITE,google-play,国外流量
   - GEOSITE,google,国外流量
-  
-  # 国内其他流量也走代理 (为了免流，通常建议全走代理)
   - GEOSITE,CN,国内流量
   - GEOIP,CN,国内流量
   
-  # 兜底规则
   - MATCH,国外流量
