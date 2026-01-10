@@ -38,31 +38,37 @@ dns:
   fake-ip-filter:
     - "*.lan"
     - "*.localhost"
-    - "stun.*"
-    - "msftconnecttest.com"
-    - "msftncsi.com"
   
-  # 默认 DNS (用于解析直连流量)
+  # 1. 这里的 default-nameserver 只能留纯 IP，仅用于解析加密 DNS 的域名
+  # 为了防止泄露，我们只保留国外 DNS，或者你可以留一个阿里的但风险自担
+  # 建议这里只留国外 DNS，虽然启动慢一点点，但绝对安全
   default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-  
-  # 主要 DNS
+    - 1.1.1.1
+    - 8.8.8.8
+
+  # 2. 核心：nameserver 只留加密的国外 DNS
+  # 这样所有请求都会强制走代理，不会直连发给国内运营商
   nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-  
-  # --- 补回了这部分 ---
-  # 代理节点域名解析 DNS (解决报错的关键)
-  proxy-server-nameserver:
-    - https://223.5.5.5/dns-query
-    - https://1.1.1.1/dns-query
-    
-  fallback:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
+
+  # 3. 专门针对抖音及其相关域名，强制指定走“成都”节点解析
+  # 注意：下面的 '成都' 必须和你 proxies 里的节点名字一模一样！
+  nameserver-policy:
+    "geosite:cn": https://223.5.5.5/dns-query#成都
+    "*.douyin.com": https://223.5.5.5/dns-query#成都
+    "*.amemv.com": https://223.5.5.5/dns-query#成都
+    "*.snssdk.com": https://223.5.5.5/dns-query#成都
+
+  # 4. 这里的配置用于解析上面那些 Doh 域名的
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
   
+  # 5. 彻底关闭 fallback，杜绝国内 DNS 抢答
+  # fallback: []  <-- 不需要写，直接删掉 fallback 字段即可
+
   respect-rules: true
+
 
 proxies:
   - name: "美国"
