@@ -76,6 +76,5 @@ rules:
   - GEOSITE,google,国外流量
   - GEOSITE,CN,国内流量
   - GEOIP,CN,国内流量
-  - GEOSITE,Category-games@cn,国内流量
   
   - MATCH,国外流量
