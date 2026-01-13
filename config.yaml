@@ -80,7 +80,6 @@ proxy-groups:
 
 rules:
 
-  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
   - AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT
   - AND,((NETWORK,UDP),(DST-PORT,19302)),REJECT
   - GEOSITE,google-play,国外流量
