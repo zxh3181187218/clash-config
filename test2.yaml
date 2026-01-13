@@ -105,7 +105,7 @@ proxy-groups:
       - "成都"
       
 rules:
-  - IP-CIDR6,::/0,REJECT,no-resolve
+  - IP-CIDR6,::/0,REJECT
   - AND,((NETWORK,UDP),(DST-PORT,53)),国内流量
   - AND,((NETWORK,UDP),(DST-PORT,123)),国内流量
   - NETWORK,UDP,REJECT
